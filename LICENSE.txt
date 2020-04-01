@@ -1,0 +1,2 @@
+Copyright 2020 Ryan P. Nicholl <rnicholl@protonmail.com>
+All Rights Reserved
