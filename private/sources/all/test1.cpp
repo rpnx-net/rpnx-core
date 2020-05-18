@@ -6,12 +6,13 @@
 
 int main()
 {
+#if false
 	try
 	{
 
 		rpnx::ip4_udp_socket socket;
 		socket.open();
-		socket.bind({ rpnx::ip4_address::any(), 0 });
+		//socket.bind({ rpnx::ip4_address::any(), 0 });
 		auto addr = socket.endpoint();
 
 		std::cout << addr << std::endl;
@@ -44,4 +45,5 @@ int main()
 	{
 		std::cerr << err.what() << std::endl;
 	}
+#endif
 }

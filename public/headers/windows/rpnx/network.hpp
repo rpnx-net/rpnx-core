@@ -54,12 +54,12 @@ namespace rpnx
       using data_type = std::array<std::uint8_t, 4>;
       data_type m_val;
   public:
-	inline in_addr native() const
-	{
-        in_addr addr;
-        std::copy(m_val.begin(), m_val.end(), reinterpret_cast<std::uint8_t*>(&addr.S_un.S_un_b));
-        return *std::launder(&addr);
-	}
+    inline in_addr native() const
+    {
+          in_addr addr;
+          std::copy(m_val.begin(), m_val.end(), reinterpret_cast<std::uint8_t*>(&addr.S_un.S_un_b));
+          return *std::launder(&addr);
+    }
 
     
     using value_type = data_type::value_type;
