@@ -188,6 +188,22 @@ namespace rpnx
           close();
       }
 
+      template <typename It> 
+      void receive(ip4_udp_endpoint & from, It & out_iterator)
+      {
+        thread_local std::array<std::byte, 256 * 256> buffer;
+        sockaddr_in from;
+        static_assert(sizeof(from) < INT_MAX);
+        int fromlen = sizeof(from);
+        auto count = recvfrom(m_s, reinterpret_cast<char*>(buffer.data()), (int)buffer.size(), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
+        if (count == SOCKET_ERROR)
+        {
+            throw network_error("upd_ip4_socket::receive()", get_wsa_error_code());
+        }
+        return { from, std::vector<std::byte>(buffer.data(), buffer.data() + count) };
+
+      }
+
       std::pair<ip4_udp_endpoint, std::vector<std::byte>> receive()
       {
           thread_local std::array<std::byte, 256 * 256> buffer;
