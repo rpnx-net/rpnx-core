@@ -6,13 +6,12 @@
 
 int main()
 {
-#if false
 	try
 	{
 
 		rpnx::ip4_udp_socket socket;
 		socket.open();
-		//socket.bind({ rpnx::ip4_address::any(), 0 });
+		socket.bind({ rpnx::ip4_address::any(), 0 });
 		auto addr = socket.endpoint();
 
 		std::cout << addr << std::endl;
@@ -27,23 +26,27 @@ int main()
 
 		socket2.open();
 		socket2.bind({ rpnx::ip4_address::any(), 0 });
-		socket2.send({ (std::byte)1, (std::byte)2, (std::byte)3 }, addr);
+		std::vector<std::byte> data_to_send = { (std::byte)1, (std::byte)2, (std::byte)3 };
 
-		auto res = socket.receive();
+		rpnx::net_send(socket2, addr, data_to_send.begin(), data_to_send.end());
 
-		std::cout << res.first << std::endl;
+		
+		std::vector<std::byte> data;
+		rpnx::ip4_udp_endpoint from;
+		rpnx::net_receive(socket, from, std::back_inserter(data));
 
-		for (auto const& x : res.second)
+		std::cout << from << std::endl;
+
+		for (auto const& x : data)
 		{
 			std::cout << (int) x << std::endl;
 		}
 
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	
 	}
 	catch (std::exception const & err)
 	{
 		std::cerr << err.what() << std::endl;
 	}
-#endif
 }

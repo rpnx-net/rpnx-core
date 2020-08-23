@@ -36,5 +36,11 @@ set_target_properties(rpnx-core-test1 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-test1 PRIVATE private/sources/all/test1.cpp)
 target_link_libraries(rpnx-core-test1 rpnx-core)
 
+
+add_executable(rpnx-core-test2)
+set_target_properties(rpnx-core-test2 PROPERTIES CXX_STANDARD 17)
+target_sources(rpnx-core-test2 PRIVATE private/sources/all/test2.cpp)
+target_link_libraries(rpnx-core-test2 rpnx-core)
+
 install(TARGETS rpnx-core EXPORT rpnx_exports)
 export(EXPORT rpnx_exports FILE RPNXCoreConfig.cmake  NAMESPACE RPNX::)
