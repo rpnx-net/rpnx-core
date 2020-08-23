@@ -52,7 +52,6 @@ namespace rpnx
 
     class ip4_udp_socket;
     class ip4_udp_endpoint;
-    class ip4_tcp_socket;
     class ip4_tcp_acceptor;
     class ip4_tcp_connection;
     class ip4_tcp_endpoint;
@@ -72,6 +71,12 @@ namespace rpnx
 
     ip4_tcp_connection net_accept_connection(ip4_tcp_acceptor&);
     void net_accept_connection(ip4_tcp_acceptor& socket, ip4_tcp_connection& connection);
+
+    template <typename It>
+    auto net_receive(ip4_tcp_connection& socket, It output_begin, It output_end)->void;
+
+    template <typename It>
+    auto net_receive(ip4_tcp_connection& socket, size_t count, It output ) -> void;
 
    
 
@@ -481,6 +486,35 @@ namespace rpnx
           throw network_error("upd_ip4_socket::send()", get_wsa_error_code());
       }
       return;
+  }
+
+
+  template <typename It>
+  void net_send(ip4_tcp_connection& socket, It begin_data, It end_data)
+  {
+      detail::wsa_intializer::singleton();
+      std::vector<std::byte> data(begin_data, end_data);
+
+      // TODO: Right now we don't support sending more than 2^32 bytes at once
+      // Ideally we should fix this
+      if (data.size() >= INT_MAX) throw std::bad_alloc("send too large");
+      
+      std::size_t st = 0;
+
+      while (st != data.size())
+      {
+          auto count = ::send(socket.native(), (const char*)data.data() + st, data.size() - st, 0);
+
+          if (count != SOCKET_ERROR)
+          {
+              st += count;
+          }
+          else
+          {
+              throw network_error("rpnx::net_send", get_wsa_error_code());
+          }
+
+      }
   }
 
   template <typename It>
