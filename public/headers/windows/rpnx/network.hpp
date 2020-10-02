@@ -471,6 +471,11 @@ namespace rpnx
           m_socket = INVALID_SOCKET;
           return skt;
       }
+
+      bool valid() const noexcept
+      {
+          return m_socket != INVALID_SOCKET;
+      }
   };
 
   template <typename It>

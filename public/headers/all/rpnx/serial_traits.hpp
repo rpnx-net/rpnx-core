@@ -6,6 +6,14 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+
+/*
+This is currently a work in progress. It's a version 2 of the original version I published as a separate library.
+This version should perform better due to the inclusion of functor interfaces, which should, at least in theory,
+optimize much better than a strictly iterator based approach, while maintaining safety.
+
+
+*/
 #ifndef RPNX_SERIAL_TRAITS_2_HPP
 #define RPNX_SERIAL_TRAITS_2_HPP
 
