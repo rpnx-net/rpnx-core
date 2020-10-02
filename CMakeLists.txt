@@ -7,7 +7,12 @@ set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
 
 target_include_directories(rpnx-core PUBLIC public/headers/all)
 
-list ( APPEND RPNX_CORE_HEADERS public/headers/all/rpnx/network_error.hpp  public/headers/all/rpnx/indirect_variant.hpp  public/headers/all/rpnx/apply.hh)
+list ( APPEND RPNX_CORE_HEADERS
+		public/headers/all/rpnx/network_error.hpp 
+		public/headers/all/rpnx/indirect_variant.hpp  
+		public/headers/all/rpnx/apply.hh 
+		public/headers/all/rpnx/serial_traits.hpp
+		)
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
 
@@ -21,11 +26,9 @@ endif()
 
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-
   target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/linux/network.cpp)
   target_include_directories(rpnx-core PUBLIC public/headers/linux)
   list ( APPEND RPNX_CORE_HEADERS public/headers/linux/rpnx/network.hpp)
-  
 endif()
 
 
@@ -41,6 +44,12 @@ add_executable(rpnx-core-test2)
 set_target_properties(rpnx-core-test2 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-test2 PRIVATE private/sources/all/test2.cpp)
 target_link_libraries(rpnx-core-test2 rpnx-core)
+
+
+add_executable(rpnx-core-benchmark1)
+set_target_properties(rpnx-core-benchmark1 PROPERTIES CXX_STANDARD 17)
+target_sources(rpnx-core-benchmark1 PRIVATE private/sources/all/bm1.cpp)
+target_link_libraries(rpnx-core-benchmark1 rpnx-core)
 
 install(TARGETS rpnx-core EXPORT rpnx_exports)
 export(EXPORT rpnx_exports FILE RPNXCoreConfig.cmake  NAMESPACE RPNX::)
