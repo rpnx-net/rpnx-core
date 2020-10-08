@@ -364,7 +364,7 @@ namespace rpnx
 		{
 			if constexpr (serial_traits<typename std::vector<T, A>::value_type>::has_fixed_serial_size())
 			{
-				return serial_traits<uintany>::serial_size(value.size()) + serial_traits<std::vector<T, A>::value_type>::fixed_serial_size() * value.size();
+				return serial_traits<uintany>::serial_size(value.size()) + serial_traits<typename std::vector<T, A>::value_type>::fixed_serial_size() * value.size();
 			}
 			else
 			{
@@ -372,7 +372,7 @@ namespace rpnx
 				result += serial_traits<uintany>::serial_size(value.size());
 				for (auto const& x : value)
 				{
-					result += serial_triats<typename std::vector<T, A>::value_type>::serial_size(x);
+					result += serial_traits<typename std::vector<T, A>::value_type>::serial_size(x);
 				}
 				return result;				
 			}

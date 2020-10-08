@@ -12,7 +12,7 @@ int main()
 
 		server.listen(rpnx::ip4_tcp_endpoint( rpnx::ip4_address(0,0,0,0), 8080 ));
 
-
+		
 		auto con = rpnx::net_accept_connection(server);
 
 		std::cout << con.endpoint() << std::endl;

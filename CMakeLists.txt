@@ -9,6 +9,7 @@ target_include_directories(rpnx-core PUBLIC public/headers/all)
 
 list ( APPEND RPNX_CORE_HEADERS
 		public/headers/all/rpnx/network_error.hpp 
+    public/headers/all/rpnx/network.hpp 
 		public/headers/all/rpnx/indirect_variant.hpp  
 		public/headers/all/rpnx/apply.hh 
 		public/headers/all/rpnx/serial_traits.hpp
@@ -18,7 +19,7 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
 
   target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/windows/network.cpp)
   target_include_directories(rpnx-core PUBLIC public/headers/windows)
-  list ( APPEND RPNX_CORE_HEADERS public/headers/windows/rpnx/network.hpp)
+  #list ( APPEND RPNX_CORE_HEADERS public/headers/windows/rpnx/network.hpp)
   target_compile_definitions(rpnx-core PRIVATE _MBCS)
   target_link_libraries(rpnx-core ws2_32)
 
@@ -28,7 +29,7 @@ endif()
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/linux/network.cpp)
   target_include_directories(rpnx-core PUBLIC public/headers/linux)
-  list ( APPEND RPNX_CORE_HEADERS public/headers/linux/rpnx/network.hpp)
+  #list ( APPEND RPNX_CORE_HEADERS public/headers/linux/rpnx/network.hpp)
 endif()
 
 
