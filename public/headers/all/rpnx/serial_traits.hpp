@@ -26,7 +26,7 @@ optimize much better than a strictly iterator based approach, while maintaining 
 #include <set>
 #include <unordered_set>
 #include <deque>
-
+#include <assert.h>
 
 namespace rpnx
 {
@@ -41,7 +41,7 @@ namespace rpnx
 	struct big_endian;
 	
 	template <typename I>
-	using little_endian = I;
+	struct little_endian;
 
 
 
@@ -49,7 +49,7 @@ namespace rpnx
 	struct serial_traits;
 
 	template <typename T, typename ItFunctor>
-	struct synchronous_functor_serialize_traits;
+	struct synchronous_functor_serial_traits;
 
 	template <typename T, typename It>
 	struct synchronous_iterator_serial_traits;
@@ -94,20 +94,60 @@ namespace rpnx
 		static inline constexpr std::size_t serial_size(const std::uint64_t&) noexcept { return 8; }
 	};
 
+	
+	template <>
+	struct serial_traits<std::int8_t>
+	{
+		static inline constexpr bool has_fixed_serial_size() noexcept { return true; }
+		static inline constexpr std::size_t fixed_serial_size() noexcept { return 1; }
+		static inline constexpr std::size_t serial_size(const std::int8_t&) noexcept { return 1; }
+	};
+
+	
+	template <>
+	struct serial_traits<std::int16_t>
+	{
+		static inline constexpr bool has_fixed_serial_size() noexcept { return true; }
+		static inline constexpr std::size_t fixed_serial_size() noexcept { return 2; }
+		static inline constexpr std::size_t serial_size(const std::int16_t&) noexcept  { return 2; }
+	};
+
+	template <>
+	struct serial_traits<std::int32_t>
+	{
+		static inline constexpr bool has_fixed_serial_size() noexcept { return true; }
+		static inline constexpr std::size_t fixed_serial_size() noexcept  { return 4; }
+		static inline constexpr std::size_t serial_size(const std::int32_t&) noexcept { return 4; }
+	};
+
+	template <>
+	struct serial_traits<std::int64_t>
+	{
+		static inline constexpr bool has_fixed_serial_size() noexcept { return true; }
+		static inline constexpr std::size_t fixed_serial_size() noexcept { return 8; }
+		static inline constexpr std::size_t serial_size(const std::int64_t&) noexcept { return 8; }
+	};
+
+	template <>
+	struct serial_traits<char>
+	 : serial_traits<int8_t>
+	{
+	};
+
 
 	// The following 4 specializations are for serial synchronous functor interfaces for the 
 	// unsigned integers
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::uint8_t, ItFunctor>
+	struct synchronous_functor_serial_traits<std::uint8_t, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::uint8_t val)
+		static inline constexpr auto serialize(std::uint8_t val, ItFunctor out_functor)
 		{
 			auto it = out_functor(1);
 			*it++ = val;
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::uint8_t& val)
+		static inline constexpr auto deserialize(std::uint8_t& val, ItFunctor in_functor)
 		{
 			auto it = in_functor(1);
 			val = *it++;
@@ -115,16 +155,16 @@ namespace rpnx
 	};
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::uint16_t, ItFunctor>
+	struct synchronous_functor_serial_traits<std::uint16_t, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::uint16_t val)
+		static inline constexpr auto serialize( std::uint16_t val, ItFunctor out_functor)
 		{
 			auto it = out_functor(2);
 			*it++ = val & 0xFF;
 			*it = (val >> 8) & 0xFF;
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::uint16_t& val)
+		static inline constexpr auto deserialize(std::uint16_t& val, ItFunctor in_functor)
 		{
 			auto it = in_functor(2);
 			val = *it++;
@@ -133,9 +173,9 @@ namespace rpnx
 	};
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::uint32_t, ItFunctor>
+	struct synchronous_functor_serial_traits<std::uint32_t, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::uint32_t val)
+		static inline constexpr auto serialize(std::uint32_t val, ItFunctor out_functor)
 		{
 			auto it = out_functor(4);
 			*it++ = val & 0xFF;
@@ -146,7 +186,7 @@ namespace rpnx
 			//synchronous_iterator_serialize_traits<std::uint32_t, std::remove_reference_t<decltype(*it)>>(it, val);
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::uint32_t& val)
+		static inline constexpr auto deserialize(std::uint32_t& val, ItFunctor in_functor)
 		{
 			auto it = in_functor(4);
 			val = *it++;
@@ -157,9 +197,9 @@ namespace rpnx
 	};
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::uint64_t, ItFunctor>
+	struct synchronous_functor_serial_traits<std::uint64_t, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::uint64_t val)
+		static inline constexpr auto serialize(std::uint64_t val, ItFunctor out_functor)
 		{
 			auto it = out_functor(8);
 			*it++ = val & 0xFF;
@@ -174,7 +214,7 @@ namespace rpnx
 			//synchronous_iterator_serialize_traits<std::uint32_t, std::remove_reference_t<decltype(*it)>>(it, val);
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::uint64_t& val)
+		static inline constexpr auto deserialize(std::uint64_t& val, ItFunctor in_functor)
 		{
 			auto it = in_functor(8);
 			val = *it++;
@@ -189,15 +229,15 @@ namespace rpnx
 	};
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::int8_t, ItFunctor>
+	struct synchronous_functor_serial_traits<std::int8_t, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::int8_t val)
+		static inline constexpr auto serialize(std::int8_t val, ItFunctor out_functor)
 		{
 			auto it = out_functor(1);
 			*it++ = val;
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::int8_t& val)
+		static inline constexpr auto deserialize(std::int8_t& val, ItFunctor in_functor)
 		{
 			auto it = in_functor(1);
 			val = *it++;
@@ -205,16 +245,16 @@ namespace rpnx
 	};
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::int16_t, ItFunctor>
+	struct synchronous_functor_serial_traits<std::int16_t, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::int16_t val)
+		static inline constexpr auto serialize( std::int16_t val, ItFunctor out_functor)
 		{
 			auto it = out_functor(2);
 			*it++ = val & 0xFF;
 			*it = (val >> 8) & 0xFF;
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::int16_t& val)
+		static inline constexpr auto deserialize(std::int16_t& val, ItFunctor in_functor)
 		{
 			auto it = in_functor(2);
 			val = *it++;
@@ -223,9 +263,9 @@ namespace rpnx
 	};
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::int32_t, ItFunctor>
+	struct synchronous_functor_serial_traits<std::int32_t, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::int32_t val)
+		static inline constexpr auto serialize(std::int32_t val, ItFunctor out_functor)
 		{
 			auto it = out_functor(4);
 			*it++ = val & 0xFF;
@@ -236,7 +276,7 @@ namespace rpnx
 			//synchronous_iterator_serialize_traits<std::int32_t, std::remove_reference_t<decltype(*it)>>(it, val);
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::int32_t& val)
+		static inline constexpr auto deserialize( std::int32_t& val, ItFunctor in_functor)
 		{
 			auto it = in_functor(4);
 			val = *it++;
@@ -247,9 +287,9 @@ namespace rpnx
 	};
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::int64_t, ItFunctor>
+	struct synchronous_functor_serial_traits<std::int64_t, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::int64_t val)
+		static inline constexpr auto serialize(std::int64_t val, ItFunctor out_functor)
 		{
 			auto it = out_functor(8);
 			*it++ = val & 0xFF;
@@ -264,7 +304,7 @@ namespace rpnx
 			//synchronous_iterator_serialize_traits<std::int32_t, std::remove_reference_t<decltype(*it)>>(it, val);
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::int64_t& val)
+		static inline constexpr auto deserialize(std::int64_t& val, ItFunctor in_functor)
 		{
 			auto it = in_functor(8);
 			val = *it++;
@@ -278,7 +318,38 @@ namespace rpnx
 		}
 	};
 
+	
 
+	template <typename It>
+	struct synchronous_iterator_serial_traits<std::uint8_t, It>
+	{	
+		static inline constexpr auto serialize(std::uint8_t val, It outIt) -> It
+		{
+			*outIt++ = val;
+			return outIt;
+		}
+	};
+
+
+	template <typename It>
+	struct synchronous_iterator_serial_traits<std::int8_t, It>
+	{	
+		static inline constexpr auto serialize(std::int8_t val, It outIt) -> It
+		{
+			*outIt++ = val;
+			return outIt;
+		}
+	};
+
+	template <typename It>
+	struct synchronous_iterator_serial_traits<char, It>
+	{	
+		static inline constexpr auto serialize(char val, It outIt) -> It
+		{
+			*outIt++ = val;
+			return outIt;
+		}
+	};
 
 
 	template <>
@@ -299,6 +370,7 @@ namespace rpnx
 			else return 10; // 10 units can represent all 64-bit integers.
 		}
 	};
+
 
 	template <typename It>
 	struct synchronous_iterator_serial_traits<uintany, It>
@@ -390,9 +462,9 @@ namespace rpnx
 	};
 
 	template <typename ItFunctor>
-	struct synchronous_functor_serialize_traits<std::string, ItFunctor>
+	struct synchronous_functor_serial_traits<std::string, ItFunctor>
 	{
-		static inline constexpr auto sync_serialize(ItFunctor out_functor, std::string const & val)
+		static inline constexpr auto serialize(ItFunctor out_functor, std::string const & val)
 		{
 			auto it = out_functor(serial_traits<std::string>::serial_size(val));
 			it = synchronous_iterator_serial_traits<uintany, decltype(it)>::quick_serialize(val.size(), it);
@@ -402,17 +474,41 @@ namespace rpnx
 			//synchronous_iterator_serialize_traits<std::int32_t, std::remove_reference_t<decltype(*it)>>(it, val);
 		}
 
-		static inline constexpr auto sync_deserialize(ItFunctor in_functor, std::int64_t& val)
+		static inline constexpr auto deserialize(ItFunctor in_functor, std::int64_t& val)
 		{
-			auto it = in_functor(8);
-			val = *it++;
-			val |= (*it++ << 8);
-			val |= (*it++ << 16);
-			val |= (*it++ << 24);
-			val |= (*it++ << 32);
-			val |= (*it++ << 40);
-			val |= (*it++ << 48);
-			val |= (*it << 56);
+			assert(false);
+		}
+	};
+
+	template <typename T, typename Alloc, typename ItFunctor>
+	struct synchronous_functor_serial_traits<std::vector<T, Alloc>, ItFunctor>
+	{
+		static inline constexpr auto serialize(std::vector<T, Alloc> const & val, ItFunctor out_functor)
+		{
+			if constexpr (serial_traits<typename std::vector<T, Alloc>::value_type>::has_fixed_serial_size())
+			{
+				auto it = out_functor(serial_traits<std::vector<T, Alloc>>::serial_size(val));
+				it = synchronous_iterator_serial_traits<uintany, decltype(it)>::quick_serialize(val.size(), it);
+				for (T const & x : val)
+				{
+					it = synchronous_iterator_serial_traits<T, decltype(it)>::serialize(x, it);
+				}
+			}
+			else
+			{
+				auto it = out_functor(serial_traits<uintany>::serial_size(val.size()));
+				it = synchronous_iterator_serial_traits<uintany, decltype(it)>::quick_serialize(val.size(), it);
+				for (auto const & x : val)
+				{
+					synchronous_functor_serial_traits<T, ItFunctor>::serialize(x, out_functor);
+				}
+
+			}
+		}
+
+		static inline constexpr auto deserialize(ItFunctor in_functor, std::int64_t& val)
+		{
+			assert(false);
 		}
 	};
 
@@ -427,7 +523,7 @@ namespace rpnx
 	template <typename T, typename ItF>
 	inline void quick_functor_serialize(T const& t, ItF f)
 	{
-		synchronous_functor_serialize_traits<T, ItF>::sync_serialize(f, t);
+		synchronous_functor_serial_traits<T, ItF>::serialize(t, f);
 	}
 
 }
