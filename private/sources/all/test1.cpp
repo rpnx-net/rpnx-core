@@ -25,7 +25,8 @@ int main()
 
 
 		socket2.open();
-		socket2.bind({ rpnx::ip4_address::any(), 0 });
+		socket2.bind();
+
 		std::vector<std::byte> data_to_send = { (std::byte)1, (std::byte)2, (std::byte)3 };
 
 		rpnx::net_send(socket2, addr, data_to_send.begin(), data_to_send.end());

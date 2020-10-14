@@ -47,14 +47,37 @@ namespace rpnx
             }
         };
     }
-    inline std::error_code get_net_os_error_code()
+    inline std::error_code get_os_network_error_code()
     {
         int er = WSAGetLastError();
         int erx = 1;
 
-        if (er == WSAEACCES)
+        switch (er)
+
         {
-            return std::make_error_code(network_errc::permission_denied);
+        case WSA_NOT_ENOUGH_MEMORY: return std::make_error_code(std::errc::not_enough_memory);
+        case WSA_INVALID_PARAMETER: return std::make_error_code(std::errc::invalid_argument);
+        case WSA_OPERATION_ABORTED: return std::make_error_code(std::errc::operation_canceled);
+        case WSA_IO_INCOMPLETE: return std::make_error_code(std::errc::operation_in_progress);
+        case WSA_IO_PENDING: return std::make_error_code(std::errc::operation_in_progress);
+        case WSAEINTR: return std::make_error_code(std::errc::interrupted);
+        case WSAEBADF: return std::make_error_code(std::errc::bad_file_descriptor);
+        case WSAEACCES: return std::make_error_code(std::errc::permission_denied);
+        case WSAEFAULT: return std::make_error_code(std::errc::bad_address);
+        case WSAEMFILE: return std::make_error_code(std::errc::too_many_files_open);       
+        case WSAEWOULDBLOCK: return std::make_error_code(std::errc::operation_would_block);
+        case WSAEINPROGRESS: return std::make_error_code(std::errc::operation_in_progress);
+        case WSAEALREADY: return std::make_error_code(std::errc::operation_in_progress);
+        case WSAEMSGSIZE: return std::make_error_code(std::errc::message_size);
+        case WSAEPFNOSUPPORT: return std::make_error_code(std::errc::protocol_not_supported);
+        case WSAEADDRINUSE: return std::make_error_code(std::errc::address_in_use);
+        case WSAEADDRNOTAVAIL: return std::make_error_code(std::errc::address_not_available);
+        case WSAENETDOWN: return std::make_error_code(std::errc::network_down);
+        case WSAENETUNREACH: return std::make_error_code(std::errc::network_unreachable);
+        case WSAENETRESET: return std::make_error_code(std::errc::network_reset);
+       //case WSAEACCES: return std::make_error_code(std::errc::permission_denied);
+        //case WSAEACCES: return std::make_error_code(std::errc::permission_denied);
+//            return std::make_error_code(network_errc::permission_denied);
         }
 
         return std::error_code(er, std::system_category());
@@ -63,7 +86,7 @@ namespace rpnx
 #endif
 
 #ifdef __linux__
-    inline std::error_code get_net_os_error_code()
+    inline std::error_code get_os_network_error_code()
     {
       return std::error_code(errno, std::system_category());
     }
@@ -121,7 +144,7 @@ namespace rpnx
 
       explicit ip4_address(in_addr const& addr)
       {
-          #ifdef __WIN32
+          #ifdef _WIN32
           m_addr[0] = addr.S_un.S_un_b.s_b1;
           m_addr[1] = addr.S_un.S_un_b.s_b2;
           m_addr[2] = addr.S_un.S_un_b.s_b3;
@@ -297,7 +320,7 @@ public:
   public:
       ip4_udp_socket() noexcept
       {     
-#ifdef __WIN32
+#ifdef _WIN32
          m_s = INVALID_SOCKET;
 #else
          m_s = -1;
@@ -341,6 +364,31 @@ public:
           net_bind(*this, ep);
       }
 
+      void bind(ip4_address addr)
+      {
+          ip4_udp_endpoint ep;
+          ep.address() = addr;
+          ep.port() = 0;
+          net_bind(*this, ep);
+      }
+
+      void bind(uint16_t portno)
+      {
+          ip4_udp_endpoint ep;
+          ep.address() = ip4_address::any();
+          ep.port() = portno;
+          net_bind(*this, ep);
+      }
+
+      void bind()
+      {
+          ip4_udp_endpoint ep;
+          ep.address() = ip4_address::any();
+          ep.port() = 0;
+          net_bind(*this, ep);
+      }
+
+
       ip4_udp_endpoint endpoint()
       {
 #ifdef _WIN32
@@ -352,7 +400,7 @@ public:
 
         if (result == SOCKET_ERROR)
         {
-            throw network_error("upd_ip4_socket::endpoint()", get_net_os_error_code());
+            throw network_error("upd_ip4_socket::endpoint()", get_os_network_error_code());
         }
         assert(len == sizeof(addr));
         return addr;
@@ -364,7 +412,7 @@ public:
 
         if (result == -1)
         {
-            throw network_error("upd_ip4_socket::endpoint()", get_net_os_error_code());
+            throw network_error("upd_ip4_socket::endpoint()", get_os_network_error_code());
         }
         assert(len == sizeof(addr));
         return addr;
@@ -397,11 +445,11 @@ public:
           detail::wsa_intializer::singleton();
           close();
           m_s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-          if (m_s == INVALID_SOCKET) throw network_error("udp_ip4_socket::open()", get_net_os_error_code());
+          if (m_s == INVALID_SOCKET) throw network_error("udp_ip4_socket::open()", get_os_network_error_code());
           #else
           this->close();
           m_s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-          if (m_s == -1) throw network_error("udp_ip4_socket::open()", get_net_os_error_code());
+          if (m_s == -1) throw network_error("udp_ip4_socket::open()", get_os_network_error_code());
           #endif
       }
 
@@ -468,11 +516,11 @@ public:
           detail::wsa_intializer::singleton();
           close();
           m_sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-          if (m_sock == INVALID_SOCKET) throw network_error("tcp_ip4_socket::open()", get_net_os_error_code());
+          if (m_sock == INVALID_SOCKET) throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
           #else
           close();
           m_sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-          if (m_sock == -1) throw network_error("tcp_ip4_socket::open()", get_net_os_error_code());
+          if (m_sock == -1) throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
           #endif
       }
 
@@ -485,7 +533,7 @@ public:
           ::bind(m_sock, (sockaddr*)&sock_addr, sizeof(sockaddr_in));
           if (::listen(m_sock, SOMAXCONN) == SOCKET_ERROR) 
           {
-              throw network_error("tcp_ip4_socket::open()", get_net_os_error_code());
+              throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
           }
           #else
           this->open();
@@ -493,7 +541,7 @@ public:
           ::bind(m_sock, (sockaddr*)&sock_addr, sizeof(sockaddr_in));
           if (::listen(m_sock, SOMAXCONN) == -1) 
           {
-              throw network_error("tcp_ip4_socket::open()", get_net_os_error_code());
+              throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
           }
           #endif
               
@@ -562,7 +610,7 @@ public:
           #endif
           if (getsockname(m_socket, (sockaddr*)&saddr, &sz) != 0)
           {
-              throw network_error("ip4_tcp_connection::endpoint", get_net_os_error_code());
+              throw network_error("ip4_tcp_connection::endpoint", get_os_network_error_code());
           }
 
           return ip4_tcp_endpoint(saddr);
@@ -570,11 +618,16 @@ public:
 
       ip4_tcp_endpoint peer_endpoint()
       {
+
           sockaddr_in saddr;
+#ifdef _WIN32
+          int sz = sizeof(saddr);
+#else
           socklen_t sz = sizeof(saddr);
+#endif
           if (getpeername(m_socket, (sockaddr*)&saddr, &sz) != 0)
           {
-              throw network_error("peer_endpoint", get_net_os_error_code());
+              throw network_error("peer_endpoint", get_os_network_error_code());
           }
 
           return ip4_tcp_endpoint(saddr);
@@ -616,7 +669,7 @@ public:
       auto result = sendto(socket.native(), (char const*)data.data(), data.size(), 0, (sockaddr*)&dest, sizeof(dest));
       if (result == SOCKET_ERROR)
       {
-          throw network_error("upd_ip4_socket::send()", get_wsa_error_code());
+          throw network_error("upd_ip4_socket::send()", get_os_network_error_code());
       }
       return;
       #else
@@ -626,7 +679,7 @@ public:
       auto result = sendto(socket.native(), (char const*)data.data(), data.size(), 0, (sockaddr*)&dest, sizeof(dest));
       if (result == -1)
       {
-          throw network_error("upd_ip4_socket::send()", get_net_os_error_code());
+          throw network_error("upd_ip4_socket::send()", get_os_network_error_code());
       }
       return;
       #endif
@@ -678,7 +731,7 @@ public:
           }
           else
           {
-              throw network_error("rpnx::net_send", get_net_os_error_code());
+              throw network_error("rpnx::net_send", get_os_network_error_code());
           }
 
       }
@@ -703,7 +756,7 @@ public:
       auto count = recvfrom(socket.native(), reinterpret_cast<char*>(buffer.data()), (int)buffer.size(), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
       if (count == -1)
       {
-          throw network_error("upd_ip4_socket::receive()", get_net_os_error_code());
+          throw network_error("upd_ip4_socket::receive()", get_os_network_error_code());
       }
 
       It it = begin_packet;
@@ -745,7 +798,7 @@ public:
       auto count = recvfrom(socket.native(), reinterpret_cast<char*>(buffer.data()), (int)buffer.size(), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
       if (count == -1)
       {
-          throw network_error("upd_ip4_socket::receive()", get_net_os_error_code());
+          throw network_error("upd_ip4_socket::receive()", get_os_network_error_code());
       }
 
       It it = begin_packet;
@@ -770,7 +823,7 @@ public:
       auto result = ::bind(socket.native(), (const sockaddr*)&socket_addr, sizeof(socket_addr));
       if (result == -1)
       {
-          throw network_error("upd_ip4_socket::bind()", get_net_os_error_code());
+          throw network_error("upd_ip4_socket::bind()", get_os_network_error_code());
       }
       return;
   }
@@ -787,7 +840,7 @@ public:
       ip4_tcp_connection con = ip4_tcp_connection(::accept(socket.native(), nullptr, nullptr));
       if (con.native() == INVALID_SOCKET)
       {
-          throw network_error("rpnx::net_accept_connection", get_wsa_error_code());
+          throw network_error("rpnx::net_accept_connection", get_os_network_error_code());
       }
 
       return std::move(con);
@@ -795,7 +848,7 @@ public:
       ip4_tcp_connection con = ip4_tcp_connection(::accept(socket.native(), nullptr, nullptr));
       if (con.native() == -1)
       {
-          throw network_error("rpnx::net_accept_connection", get_net_os_error_code());
+          throw network_error("rpnx::net_accept_connection", get_os_network_error_code());
       }
 
       return std::move(con);
