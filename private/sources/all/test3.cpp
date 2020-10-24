@@ -51,5 +51,10 @@ int main()
 
     std::cout << the_bar.test() << std::endl;
 
+    std::cout << std::boolalpha << "valueless? " << the_bar.thing_bar.holds_alternative<void>() << std::endl;
+
+    the_bar.thing_bar.emplace<foo>();
+
+    std::cout << std::boolalpha << "valueless? " << the_bar.thing_bar.holds_alternative<void>() << std::endl;
 
 }
