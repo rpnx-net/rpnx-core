@@ -199,6 +199,12 @@ namespace rpnx
             std::swap(m_value, other.m_value);
         }
 
+        template <typename T>
+        bool holds_alternative() const noexcept
+        {
+            return tuple_type_index<T, std::tuple<Types...>>::value == m_vtab->m_index;
+        }
+
 
     };
 
