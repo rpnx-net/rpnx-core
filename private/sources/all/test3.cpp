@@ -2,6 +2,32 @@
 
 #include <rpnx/derivator.hpp>
 #include <string>
+#include <rpnx/meta.hpp>
+
+struct foo;
+
+struct bar;
+
+
+struct foo
+{
+    rpnx::derivator<void, foo, bar> thing_foo;
+};
+
+struct bar
+{
+    std::string value;
+    bar(std::string const & init)
+    : value(init)
+    {
+
+    }
+   rpnx::derivator<void, foo, bar> thing_bar;
+   std::string test()
+   {
+       return "baz " + value;
+   }
+};
 
 int main()
 {
@@ -9,10 +35,21 @@ int main()
     test.as<0>() = 4;
 
     std::cout << test.as<0>()  << std::endl;
-
+    std::cout << test.as<int>()  << std::endl;
 
     test.emplace<1>("Testing!");
 
     std::cout << test.as<1>() << std::endl;
+    std::cout << test.as<std::string>() << std::endl;
+
+    foo f;
+
+    f.thing_foo.emplace<1>();
+    f.thing_foo.as<foo>().thing_foo.emplace<2>("penguin");
+
+    bar & the_bar = f.thing_foo.as<foo>().thing_foo.as<bar>();
+
+    std::cout << the_bar.test() << std::endl;
+
 
 }
