@@ -13,6 +13,7 @@ list ( APPEND RPNX_CORE_HEADERS
 		public/headers/all/rpnx/indirect_variant.hpp  
 		public/headers/all/rpnx/apply.hh 
 		public/headers/all/rpnx/serial_traits.hpp
+        public/headers/all/rpnx/derivator.hpp
 		)
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
@@ -45,6 +46,12 @@ add_executable(rpnx-core-test2)
 set_target_properties(rpnx-core-test2 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-test2 PRIVATE private/sources/all/test2.cpp)
 target_link_libraries(rpnx-core-test2 rpnx-core)
+
+add_executable(rpnx-core-test3)
+set_target_properties(rpnx-core-test3 PROPERTIES CXX_STANDARD 17)
+target_sources(rpnx-core-test3 PRIVATE private/sources/all/test3.cpp)
+target_link_libraries(rpnx-core-test3 rpnx-core)
+
 
 
 add_executable(rpnx-core-benchmark1)

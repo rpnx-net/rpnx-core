@@ -9,8 +9,8 @@
 #include <utility>
 #include <typeindex>
 
-#include "rpnx/util.hh"
-#include "rpnx/apply.hh"
+#include "rpnx/util.hpp"
+#include "rpnx/apply.hpp"
 
 #include <iostream>
 
