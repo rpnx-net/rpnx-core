@@ -87,6 +87,7 @@ namespace rpnx
             if constexpr(std::is_void_v< std::tuple_element_t<I, std::tuple<Types...>> >)
             {
                 destroy();
+                m_vtab = &derivator_vtab_v<I,  std::tuple_element_t<I, std::tuple<Types...>>, Alloc>;
             }
             else
             {
@@ -106,8 +107,12 @@ namespace rpnx
             }
         }
 
+        
+
 
     };
+
+   
 
     template <typename ... Ts>
     using derivator = basic_derivator<std::allocator<void>, Ts...>;
