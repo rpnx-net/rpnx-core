@@ -166,6 +166,39 @@ namespace rpnx
             return as<tuple_type_index<T, std::tuple<Types...>>::value>();
         }
 
+        template <int I>
+        std::tuple_element_t<I, std::tuple<Types...>> & as_unchecked()
+        {
+            return *reinterpret_cast<std::tuple_element_t<I, std::tuple<Types...>>*>(m_value);
+        }
+
+        template <int I>
+        std::tuple_element_t<I, std::tuple<Types...>> const & as_unchecked() const
+        {
+            return *reinterpret_cast<std::tuple_element_t<I, std::tuple<Types...>> const*>(m_value);
+        }
+
+        template <typename T>
+        auto & as_unchecked()
+        {
+            static_assert(tuple_type_index<T, std::tuple<Types...>>::value != -1, "The type T in derivator<Types...>::as<T>() is not present in Types...");
+            return as_unchecked<tuple_type_index<T, std::tuple<Types...>>::value>();
+        }
+
+        template <typename T>
+        auto const & as_unchecked() const
+        {
+            static_assert(tuple_type_index<T, std::tuple<Types...>>::value != -1, "The type T in derivator<Types...>::as<T>() is not present in Types...");
+            return as_unchecked<tuple_type_index<T, std::tuple<Types...>>::value>();
+        }
+
+        void swap(basic_derivator<Alloc, Types...>  & other) noexcept
+        {
+            // TODO: this should only be noexcept if the allocator void_pointer type is noexcept swappable
+            std::swap(m_vtab, other.m_vtab);
+            std::swap(m_value, other.m_value);
+        }
+
 
     };
 
