@@ -9,6 +9,7 @@
 #include <memory>
 #include <tuple>
 #include <typeindex>
+#include <variant>
 
 namespace rpnx
 {
@@ -104,12 +105,29 @@ namespace rpnx
                 }
                 destroy();
                 m_vtab = &derivator_vtab_v<I,  std::tuple_element_t<I, std::tuple<Types...>>, Alloc>;
+                m_value = reinterpret_cast<void*>(ptr);
             }
         }
 
         std::size_t index() const noexcept
         {
            return m_vtab->m_index;
+        }
+
+        template <int I>
+        std::tuple_element_t<I, std::tuple<Types...>> & as()
+        {
+            if (m_vtab->m_index != I) throw std::invalid_argument("derivator");
+
+            return *reinterpret_cast<std::tuple_element_t<I, std::tuple<Types...>>*>(m_value);
+        }
+
+        template <int I>
+        std::tuple_element_t<I, std::tuple<Types...>> const & as() const
+        {
+            if (m_vtab->m_index != I) throw std::invalid_argument("derivator");
+
+            return *reinterpret_cast<std::tuple_element_t<I, std::tuple<Types...>> const*>(m_value);
         }
 
 
