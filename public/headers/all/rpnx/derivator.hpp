@@ -35,6 +35,7 @@ namespace rpnx
     {
         derivator_vtab<Alloc> tb;
         tb.m_type_index = typeid(T);
+        // TODO: We assume actual void* here, change to use the allocator traits "void*" to support fancy pointers
         tb.m_copier = [](void const* src, void * dest)
         {
             if constexpr (! std::is_void_v<T>)
@@ -42,6 +43,8 @@ namespace rpnx
                 new (dest) T(*reinterpret_cast<T const *>(src));
             }
         };
+
+        // TODO: We assume actual void* here, change to use the allocator traits "void*" to support fancy pointers
         tb.m_deleter = [](Alloc const &a, void *val)
         {
             if constexpr (! std::is_void_v<T>)
@@ -50,8 +53,11 @@ namespace rpnx
             (typename std::allocator_traits<Alloc>::template rebind_alloc<T>(a)).deallocate(reinterpret_cast<T*>(val), sizeof(T));
             }
         };
+
+        // TODO: It would be nice to support comparisons where possible, fix this.
         tb.m_equals = nullptr;
         tb.m_less = nullptr;
+        
         tb.m_index = I;
 
         return tb;
