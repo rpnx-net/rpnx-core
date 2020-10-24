@@ -23,11 +23,11 @@ namespace rpnx
     struct derivator_vtab
     {
         std::type_index m_type_index = typeid(void);
-        void (*m_deleter)(Allocator const& a, typename std::allocator_traits<Allocator>::void_pointer);
-        void (*m_copier)(typename std::allocator_traits<Allocator>::const_void_pointer, typename std::allocator_traits<Allocator>::void_pointer);
-        bool (*m_equals)(typename std::allocator_traits<Allocator>::void_pointer, typename std::allocator_traits<Allocator>::void_pointer);
-        bool (*m_less)(void const*, void const *);
-        int m_index;
+        void (*m_deleter)(Allocator const& a, typename std::allocator_traits<Allocator>::void_pointer) = nullptr;
+        void (*m_copier)(typename std::allocator_traits<Allocator>::const_void_pointer, typename std::allocator_traits<Allocator>::void_pointer) = nullptr;
+        bool (*m_equals)(typename std::allocator_traits<Allocator>::void_pointer, typename std::allocator_traits<Allocator>::void_pointer) = nullptr;
+        bool (*m_less)(void const*, void const *) = nullptr;
+        int m_index = -1;
     };
 
     template <int I, typename T, typename Alloc>
@@ -37,12 +37,18 @@ namespace rpnx
         tb.m_type_index = typeid(T);
         tb.m_copier = [](void const* src, void * dest)
         {
-            new (dest) T(*reinterpret_cast<T const *>(src));
+            if constexpr (! std::is_void_v<T>)
+            {
+                new (dest) T(*reinterpret_cast<T const *>(src));
+            }
         };
         tb.m_deleter = [](Alloc const &a, void *val)
         {
+            if constexpr (! std::is_void_v<T>)
+            {
             reinterpret_cast<T*>(val)->T::~T();
             (typename std::allocator_traits<Alloc>::template rebind_alloc<T>(a)).deallocate(reinterpret_cast<T*>(val), sizeof(T));
+            }
         };
         tb.m_equals = nullptr;
         tb.m_less = nullptr;
