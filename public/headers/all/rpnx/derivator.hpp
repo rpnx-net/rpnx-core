@@ -11,6 +11,8 @@
 #include <typeindex>
 #include <variant>
 
+#include <rpnx/meta.hpp>
+
 namespace rpnx
 {
 
@@ -128,6 +130,20 @@ namespace rpnx
             if (m_vtab->m_index != I) throw std::invalid_argument("derivator");
 
             return *reinterpret_cast<std::tuple_element_t<I, std::tuple<Types...>> const*>(m_value);
+        }
+
+        template <typename T>
+        auto & as()
+        {
+            static_assert(tuple_type_index<T, std::tuple<Types...>>::value != -1, "The type T in derivator<Types...>::as<T>() is not present in Types...");
+            return as<tuple_type_index<T, std::tuple<Types...>>::value>();
+        }
+
+        template <typename T>
+        auto const & as() const
+        {
+            static_assert(tuple_type_index<T, std::tuple<Types...>>::value != -1, "The type T in derivator<Types...>::as<T>() is not present in Types...");
+            return as<tuple_type_index<T, std::tuple<Types...>>::value>();
         }
 
 
