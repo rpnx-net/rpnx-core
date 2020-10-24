@@ -375,7 +375,7 @@ namespace rpnx
 	template <typename It>
 	struct synchronous_iterator_serial_traits<uintany, It>
 	{
-		static inline It quick_serialize(uintmax_t in, It out)
+		static inline It serialize(uintmax_t in, It out)
 		{
 			// This isn't the best function, it might give wrong results for really large values.
 			// It's good enough for now.
@@ -407,7 +407,7 @@ namespace rpnx
 			return out;
 		}
 
-		static inline It quick_deserialize(uintmax_t& n, It in)
+		static inline It deserialize(uintmax_t& n, It in)
 		{
 			// This function is slow, optimize it
 			n = 0;
@@ -425,6 +425,40 @@ namespace rpnx
 				n += (uintmax_t(1) << (i * 7));
 			}
 			return in;
+		}
+	};
+
+	template <typename ItF>
+	struct synchronous_functor_serial_traits<uintany, ItF>
+	{
+		template <typename Integral>
+		static inline constexpr void deserialize(Integral & i, ItF functor)
+		{
+			static_assert(std::is_integral_v<Integral>);
+
+			i = 0;
+			Integral i2 = 0;
+			while (true)
+			{
+				auto it = functor(1);
+				uint8_t val = *it++;
+				i2 <<= 7;
+				i2 |= val & 0b1111111;
+				if (val & 0b10000000)
+				{
+					// There are additional bytes
+					i <<= 7;
+					// TODO: Check for overflow here and throw an exception if the 
+					// variable length integer is too large to be encoded in the destination type
+
+					i |= 0b10000000;
+				}
+				else break;
+			}
+
+			i += i2;
+
+
 		}
 	};
 
@@ -464,31 +498,33 @@ namespace rpnx
 	template <typename ItFunctor>
 	struct synchronous_functor_serial_traits<std::string, ItFunctor>
 	{
-		static inline constexpr auto serialize(ItFunctor out_functor, std::string const & val)
+		static inline constexpr auto serialize(std::string const & val, ItFunctor out_functor )
 		{
 			auto it = out_functor(serial_traits<std::string>::serial_size(val));
-			it = synchronous_iterator_serial_traits<uintany, decltype(it)>::quick_serialize(val.size(), it);
+			it = synchronous_iterator_serial_traits<uintany, decltype(it)>::serialize(val.size(), it);
 			std::copy(val.begin(), val.end(), it);
-			
-			// TODO: Update this to use iterator trait specializations
-			//synchronous_iterator_serialize_traits<std::int32_t, std::remove_reference_t<decltype(*it)>>(it, val);
 		}
 
-		static inline constexpr auto deserialize(ItFunctor in_functor, std::int64_t& val)
+		static inline constexpr auto deserialize(std::string & val, ItFunctor in_functor)
 		{
-			assert(false);
+			std::size_t count;
+			synchronous_functor_serial_traits<uintany, ItFunctor>::deserialize(count, in_functor);
+			auto it = in_functor(count);
+			val.resize(count);
+			std::copy_n(it, count, val.begin());
 		}
 	};
 
 	template <typename T, typename Alloc, typename ItFunctor>
 	struct synchronous_functor_serial_traits<std::vector<T, Alloc>, ItFunctor>
 	{
-		static inline constexpr auto serialize(std::vector<T, Alloc> const & val, ItFunctor out_functor)
+		template <typename T2, typename Alloc2>
+		static inline constexpr auto serialize(std::vector<T2, Alloc2> const & val, ItFunctor out_functor)
 		{
 			if constexpr (serial_traits<typename std::vector<T, Alloc>::value_type>::has_fixed_serial_size())
 			{
 				auto it = out_functor(serial_traits<std::vector<T, Alloc>>::serial_size(val));
-				it = synchronous_iterator_serial_traits<uintany, decltype(it)>::quick_serialize(val.size(), it);
+				it = synchronous_iterator_serial_traits<uintany, decltype(it)>::serialize(val.size(), it);
 				for (T const & x : val)
 				{
 					it = synchronous_iterator_serial_traits<T, decltype(it)>::serialize(x, it);
@@ -497,7 +533,7 @@ namespace rpnx
 			else
 			{
 				auto it = out_functor(serial_traits<uintany>::serial_size(val.size()));
-				it = synchronous_iterator_serial_traits<uintany, decltype(it)>::quick_serialize(val.size(), it);
+				it = synchronous_iterator_serial_traits<uintany, decltype(it)>::serialize(val.size(), it);
 				for (auto const & x : val)
 				{
 					synchronous_functor_serial_traits<T, ItFunctor>::serialize(x, out_functor);
@@ -506,9 +542,26 @@ namespace rpnx
 			}
 		}
 
+		
+		/*
 		static inline constexpr auto deserialize(ItFunctor in_functor, std::int64_t& val)
 		{
 			assert(false);
+		}
+		*/
+	};
+
+	template <typename T, typename Alloc, typename It>
+	struct synchronous_iterator_serial_traits<std::vector<T, Alloc>, It>
+	{
+		static inline constexpr auto serialize(std::vector<T, Alloc> const& val, It it)
+		{				
+			it = synchronous_iterator_serial_traits<uintany, decltype(it)>::serialize(val.size(), it);
+			for (T const& x : val)
+			{
+				it = synchronous_iterator_serial_traits<T, decltype(it)>::serialize(x, it);
+			}
+			return it;
 		}
 	};
 
@@ -524,6 +577,18 @@ namespace rpnx
 	inline void quick_functor_serialize(T const& t, ItF f)
 	{
 		synchronous_functor_serial_traits<T, ItF>::serialize(t, f);
+	}
+
+	template <typename T, typename It>
+	inline void quick_iterator_serialize(T const& t, It i)
+	{
+		synchronous_iterator_serial_traits<T, It>::serialize(t, i);
+	}
+
+	template <typename T>
+	inline std::size_t get_serial_size(T const& t)
+	{
+		return serial_traits<T>::serial_size(t);
 	}
 
 }

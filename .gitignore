@@ -3,6 +3,9 @@
 /out
 *~
 #*#
+.idea
+/cmake-build-release
+/cmake-build-debug
 .vscode
 .thumbsdb
 CMakeLists.txt.user
