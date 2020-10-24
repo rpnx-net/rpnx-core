@@ -107,7 +107,10 @@ namespace rpnx
             }
         }
 
-        
+        std::size_t index() const noexcept
+        {
+           return m_vtab->m_index;
+        }
 
 
     };
