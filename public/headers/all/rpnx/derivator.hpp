@@ -1,3 +1,7 @@
+// Copyright 2015, 2016, 2020 Ryan P. Nicholl <rnicholl@protonmail.com>
+// All rights reserved
+// See rpnx-core/LICENSE.txt
+
 #ifndef RPNX_DERIVATOR_HPP
 #define RPNX_DERIVATOR_HPP
 
