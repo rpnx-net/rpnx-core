@@ -44,8 +44,8 @@ int main()
 
     foo f;
 
-    f.thing_foo.emplace<1>();
-    f.thing_foo.as<foo>().thing_foo.emplace<2>("penguin");
+    f.thing_foo.emplace<foo>();
+    f.thing_foo.as<foo>().thing_foo.emplace<bar>("penguin");
 
     bar & the_bar = f.thing_foo.as<foo>().thing_foo.as<bar>();
 

@@ -49,7 +49,7 @@ namespace rpnx
         {
             if constexpr (! std::is_void_v<T>)
             {
-            reinterpret_cast<T*>(val)->T::~T();
+                reinterpret_cast<T*>(val)->T::~T();
             (typename std::allocator_traits<Alloc>::template rebind_alloc<T>(a)).deallocate(reinterpret_cast<T*>(val), sizeof(T));
             }
         };
@@ -57,7 +57,7 @@ namespace rpnx
         // TODO: It would be nice to support comparisons where possible, fix this.
         tb.m_equals = nullptr;
         tb.m_less = nullptr;
-        
+
         tb.m_index = I;
 
         return tb;
@@ -95,9 +95,17 @@ namespace rpnx
 
         }
 
+
+        template <typename T, typename ...Ts>
+        void emplace (Ts && ... ts)
+        {
+            emplace< tuple_type_index<T, std::tuple<Types...>>::value >(std::forward<Ts>(ts)...);
+        }
+
         template <size_t I, typename ... Ts>
         void emplace(Ts &&  ...ts)
         {
+            
 
             if constexpr(std::is_void_v< std::tuple_element_t<I, std::tuple<Types...>> >)
             {
