@@ -27,6 +27,7 @@ optimize much better than a strictly iterator based approach, while maintaining 
 #include <unordered_set>
 #include <deque>
 #include <assert.h>
+#include <algorithm>
 
 namespace rpnx
 {

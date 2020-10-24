@@ -15,15 +15,37 @@ namespace rpnx
     template <typename Allocator>
     struct derivator_vtab
     {
-        std::type_index m_type_index;
-        void (*m_deleter)(Allocator::void_pointer *);
-        void (*m_copier)(Allocator::void_pointer, Allocator::void_pointer);
-        bool (*m_equals)(Allocator::void_pointer, Allocator::void_pointer);
+        std::type_index m_type_index = typeid(void);
+        void (*m_deleter)(Allocator const& a, typename std::allocator_traits<Allocator>::void_pointer);
+        void (*m_copier)(typename std::allocator_traits<Allocator>::const_void_pointer, typename std::allocator_traits<Allocator>::void_pointer);
+        bool (*m_equals)(typename std::allocator_traits<Allocator>::void_pointer, typename std::allocator_traits<Allocator>::void_pointer);
         bool (*m_less)(void const*, void const *);
         int m_index;
     };
 
+    template <int I, typename T, typename Alloc>
+    constexpr derivator_vtab<Alloc> init_vtab_for()
+    {
+        derivator_vtab<Alloc> tb;
+        tb.m_type_index = typeid(T);
+        tb.m_copier = [](void const* src, void * dest)
+        {
+            new (dest) T(*reinterpret_cast<T const *>(src));
+        };
+        tb.m_deleter = [](Alloc const &a, void *val)
+        {
+            reinterpret_cast<T*>(val)->T::~T();
+            (typename std::allocator_traits<Alloc>::template rebind_alloc<T>(a)).deallocate(reinterpret_cast<T*>(val), sizeof(T));
+        };
+        tb.m_equals = nullptr;
+        tb.m_less = nullptr;
+        tb.m_index = I;
 
+        return tb;
+    }
+
+    template <int I, typename T, typename Alloc>
+    inline derivator_vtab<Alloc> derivator_vtab_v =  init_vtab_for<I, T, Alloc>();
 
 
     template <typename Alloc, typename ... Types>
@@ -31,7 +53,7 @@ namespace rpnx
     : private Alloc
     {
         typename std::allocator_traits<Alloc>::void_pointer m_value;
-        derivator_vtab * m_vtab;
+        derivator_vtab<Alloc> * m_vtab;
 
     public:
 
@@ -48,7 +70,7 @@ namespace rpnx
         {
             if (m_value && m_vtab)
             {
-                m_vtab->m_deleter(m_value);
+                m_vtab->m_deleter((Alloc&)*this, m_value);
                 m_value = nullptr;
             }
 
@@ -72,11 +94,11 @@ namespace rpnx
                 }
                 catch (...)
                 {
-                    (typename std::allocator_traits<Alloc>::template rebind_alloc<std::tuple_element_t<I, std::tuple<Types...>>>((Alloc&)*this)).deallocate(ptr);
+                    (typename std::allocator_traits<Alloc>::template rebind_alloc<std::tuple_element_t<I, std::tuple<Types...>>>((Alloc&)*this)).deallocate(ptr, sizeof(std::tuple_element_t<I, std::tuple<Types...>>));
                     throw;
                 }
                 destroy();
-                m_vtab = derivator_vtable_v<I, Ts...>;
+                m_vtab = &derivator_vtab_v<I,  std::tuple_element_t<I, std::tuple<Types...>>, Alloc>;
             }
         }
 
