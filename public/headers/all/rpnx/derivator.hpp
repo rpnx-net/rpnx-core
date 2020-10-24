@@ -60,7 +60,7 @@ namespace rpnx
     template <int I, typename T, typename Alloc>
     inline derivator_vtab<Alloc> derivator_vtab_v =  init_vtab_for<I, T, Alloc>();
 
-
+    
     template <typename Alloc, typename ... Types>
     class basic_derivator
     : private Alloc
@@ -156,7 +156,12 @@ namespace rpnx
     };
 
    
-
+    /** The class rpnx::derivator is a bit like std::variant, except that it allocates memory indirectly.
+     * This allows derivators that can refer to the enclosing class, and also can save memory if some possible 
+     * values are much larger than others (variant always allocates enough space for the largest). If you 
+     * need control over memory allocation, use rpnx::basic_derivator<Allocator, Types...>
+     * 
+     * */
     template <typename ... Ts>
     using derivator = basic_derivator<std::allocator<void>, Ts...>;
 }
