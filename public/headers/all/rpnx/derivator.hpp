@@ -273,6 +273,10 @@ namespace rpnx
         {
             // TODO: this should only be noexcept if the allocator void_pointer type is
             // noexcept swappable
+            if constexpr (std::allocator_traits<allocator_type>::propagate_on_container_swap::value)
+            {
+                std::swap(*(allocator_type*)this,*(allocator_type*)other);
+            }
             std::swap(m_vtab, other.m_vtab);
             std::swap(m_value, other.m_value);
         }
