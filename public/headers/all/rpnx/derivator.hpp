@@ -15,6 +15,7 @@
 #include <assert.h>
 
 #include <rpnx/meta.hpp>
+#include <rpnx/assert.hpp>
 
 namespace rpnx
 {
@@ -275,7 +276,11 @@ namespace rpnx
             // noexcept swappable
             if constexpr (std::allocator_traits<allocator_type>::propagate_on_container_swap::value)
             {
-                std::swap(*(allocator_type*)this,*(allocator_type*)other);
+                std::swap(static_cast<allocator_type&>(*this),static_cast<allocator_type&>(other));
+            }
+            else
+            {
+                RPNX_ASSERT(static_cast<allocator_type&>(*this) == static_cast<allocator_type&>(other));
             }
             std::swap(m_vtab, other.m_vtab);
             std::swap(m_value, other.m_value);
