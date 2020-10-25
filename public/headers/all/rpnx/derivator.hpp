@@ -23,13 +23,13 @@ namespace rpnx
     template < typename Allocator >
     struct derivator_vtab
     {
-        std::type_index m_type_index = typeid(void);
         void (*m_deleter)(Allocator const& a, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
         void* (*m_construct_copy)(Allocator const & alloc, typename std::allocator_traits< Allocator >::const_void_pointer) = nullptr;
         void* (*m_construct_move)(Allocator const & alloc, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
         bool (*m_equals)(typename std::allocator_traits< Allocator >::void_pointer, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
         bool (*m_less)(void const*, void const*) = nullptr;
         int m_index = -1;
+        bool is_void = false;
     };
 
     namespace detail
@@ -89,10 +89,10 @@ namespace rpnx
     
     
     template < int I, typename T, typename Allocator >
-    derivator_vtab< Allocator > init_vtab_for()
+    constexpr derivator_vtab< Allocator > init_vtab_for()
     {
         derivator_vtab< Allocator > tb;
-        tb.m_type_index = typeid(T);        
+           
         tb.m_construct_copy = &detail::derivator_construct_copy< T, Allocator >;
         tb.m_construct_move = &detail::derivator_construct_move< T, Allocator >;
         tb.m_deleter = &detail::derivator_deletor< T, Allocator >;
@@ -102,12 +102,13 @@ namespace rpnx
         tb.m_less = nullptr;
 
         tb.m_index = I;
+        tb.is_void = std::is_void_v<T>;
 
         return tb;
     }
 
     template < int I, typename T, typename Allocator >
-    inline derivator_vtab< Allocator > derivator_vtab_v = init_vtab_for< I, T, Allocator >();
+    inline constexpr const derivator_vtab< Allocator > derivator_vtab_v = init_vtab_for< I, T, Allocator >();
 
     template < typename Allocator, typename... Types >
     class basic_derivator : private Allocator
@@ -115,7 +116,7 @@ namespace rpnx
         static_assert(std::is_same_v<std::allocator<void>, Allocator>, "Custom allocators don't work yet.");
 
         typename std::allocator_traits< Allocator >::void_pointer m_value;
-        derivator_vtab< Allocator >* m_vtab;
+        derivator_vtab< Allocator > const* m_vtab;
       private:
         void make_void()
         {
@@ -359,6 +360,11 @@ namespace rpnx
         bool holds_alternative() const noexcept
         {
             return tuple_type_index< T, std::tuple< Types... > >::value == m_vtab->m_index;
+        }
+
+        bool has_value() const noexcept
+        {
+            return m_value != nullptr;
         }
     };
 
