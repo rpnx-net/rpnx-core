@@ -1,3 +1,7 @@
+// Copyright 2020 Ryan P. Nicholl <rnicholl@protonmail.com>, http://rpnx.net/
+// All rights reserved
+// See rpnx-core/LICENSE.txt
+
 #ifndef RPNX_META_HPP
 #define RPNX_META_HPP
 #include <tuple>
