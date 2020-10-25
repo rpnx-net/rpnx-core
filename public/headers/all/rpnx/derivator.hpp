@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <typeindex>
 #include <variant>
+#include <assert.h>
 
 #include <rpnx/meta.hpp>
 
@@ -104,6 +105,8 @@ namespace rpnx
         }
 
       public:
+        using allocator_type = Allocator;
+
         basic_derivator() noexcept(noexcept(Allocator()))
             : m_value(nullptr), m_vtab(nullptr) { emplace< 0 >(); }
         ~basic_derivator() { destroy(); }
@@ -125,6 +128,32 @@ namespace rpnx
             std::swap(m_vtab, other.m_vtab);
             std::swap(m_value, other.m_value);
 
+        }
+
+        basic_derivator<Allocator, Types...> & operator =(basic_derivator<Allocator, Types...> && other)
+        {
+            static_assert(std::is_same_v<Allocator, std::allocator<void>>, "Not implemented");
+            /*
+            if constexpr (std::allocator_traits<allocator_type>::propagate_on_container_move_assignment::value)
+            {
+                //if (get_allocator() != other.get_allocator())
+                *(allocator_type*)this = static_cast<allocator_type&>(other); 
+            }
+            */
+           std::swap(m_value, other.m_value);
+           std::swap(m_vtab, other.m_vtab);
+
+           return *this;
+        }
+
+        basic_derivator<Allocator, Types...> & operator =(basic_derivator<Allocator, Types...> const & other)
+        {
+            static_assert(std::is_same_v<Allocator, std::allocator<void>>, "Not implemented");
+            assert(other.m_vtab != nullptr);
+            void *value = other.m_vtab->m_construct(other, other.m_value );
+            m_value = value;
+            m_vtab = other.m_vtab;
+            return *this;
         }
 
         Allocator const& get_allocator() const noexcept 
