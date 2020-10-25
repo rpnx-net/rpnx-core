@@ -54,22 +54,22 @@ struct bar
 int main()
 {
     rpnx::derivator<int, std::string> test;
-    test.as<0>() = 4;
+    test.as_checked<0>() = 4;
 
-    std::cout << test.as<0>()  << std::endl;
-    std::cout << test.as<int>()  << std::endl;
+    std::cout << test.as_checked<0>()  << std::endl;
+    std::cout << test.as_checked<int>()  << std::endl;
 
     test.emplace<1>("Testing!");
 
-    std::cout << test.as<1>() << std::endl;
-    std::cout << test.as<std::string>() << std::endl;
+    std::cout << test.as_checked<1>() << std::endl;
+    std::cout << test.as_checked<std::string>() << std::endl;
 
     foo f;
 
     f.thing_foo.emplace<foo>();
-    f.thing_foo.as<foo>().thing_foo.emplace<bar>("penguin");
+    f.thing_foo.as_checked<foo>().thing_foo.emplace<bar>("penguin");
 
-    bar & the_bar = f.thing_foo.as<foo>().thing_foo.as<bar>();
+    bar & the_bar = f.thing_foo.as_checked<foo>().thing_foo.as_checked<bar>();
 
     std::cout << the_bar.test() << std::endl;
 
