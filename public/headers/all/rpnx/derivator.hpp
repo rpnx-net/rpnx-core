@@ -24,8 +24,8 @@ namespace rpnx
     struct derivator_vtab
     {
         std::type_index m_type_index = typeid(void);
-        void (*m_deleter)(Allocator* a, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
-        void* (*m_construct)(Allocator* alloc, typename std::allocator_traits< Allocator >::const_void_pointer) = nullptr;
+        void (*m_deleter)(Allocator const& a, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
+        void* (*m_construct)(Allocator const & alloc, typename std::allocator_traits< Allocator >::const_void_pointer) = nullptr;
         bool (*m_equals)(typename std::allocator_traits< Allocator >::void_pointer, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
         bool (*m_less)(void const*, void const*) = nullptr;
         int m_index = -1;
@@ -36,28 +36,28 @@ namespace rpnx
 
         // There is some bug in visual studio that causes this not to work
         template < typename T, typename Alloc >
-        void derivator_deletor(Alloc* alloc, void* src)
+        void derivator_deletor(Alloc const & alloc, void* src)
         {
             if constexpr (!std::is_void_v< T >)
             {
                 ((T*)src)->T::~T();
-                (typename std::allocator_traits< Alloc >::template rebind_alloc< T >(*alloc)).deallocate((T*)src, sizeof(T));
+                (typename std::allocator_traits< Alloc >::template rebind_alloc< T >(alloc)).deallocate((T*)src, sizeof(T));
             }
         }
 
         template <typename T, typename Alloc>
-        void * derivator_new(Alloc * alloc, void const * src)
+        void * derivator_new(Alloc const & alloc, void const * src)
         {
             if constexpr (!std::is_void_v< T >)
             {
-                void* dest = (typename std::allocator_traits< Alloc >::template rebind_alloc< T >(*alloc)).allocate(sizeof(T));
+                void* dest = (typename std::allocator_traits< Alloc >::template rebind_alloc< T >(alloc)).allocate(sizeof(T));
                 try
                 {
                     return (void*)new (dest) T(*reinterpret_cast< T const* >(src));
                 }
                 catch (...)
                 {
-                    (typename std::allocator_traits< Alloc >::template rebind_alloc< T >(*alloc)).deallocate((T*)dest, sizeof(T));
+                    (typename std::allocator_traits< Alloc >::template rebind_alloc< T >(alloc)).deallocate((T*)dest, sizeof(T));
                     throw;
                 }
             }
@@ -94,14 +94,30 @@ namespace rpnx
         derivator_vtab< Allocator >* m_vtab;
 
       public:
-        basic_derivator() : m_value(nullptr), m_vtab(nullptr) { emplace< 0 >(); }
+        basic_derivator() noexcept(noexcept(Allocator()))
+            : m_value(nullptr), m_vtab(nullptr) { emplace< 0 >(); }
         ~basic_derivator() { destroy(); }
+
+        basic_derivator(basic_derivator<Allocator, Types...> const& other) 
+            : Allocator(other) 
+        {
+            if (other.m_value)
+            {
+                m_value = other.m_vtab->m_construct(get_allocator(), other.m_value);
+                m_vtab = other.m_vtab;
+            }
+        }
+
+        Allocator const& get_allocator() const noexcept 
+        {
+            return *this;
+        }
 
         void destroy()
         {
             if (m_value && m_vtab)
             {
-                m_vtab->m_deleter(this, m_value);
+                m_vtab->m_deleter(get_allocator(), m_value);
                 m_value = nullptr;
             }
         }
@@ -123,14 +139,14 @@ namespace rpnx
             else
             {
                 using T = std::tuple_element_t< I, std::tuple< Types... > >;
-                void* ptr = (typename std::allocator_traits< Allocator >::template rebind_alloc< T >((Allocator&)*this)).allocate(sizeof(std::tuple_element_t< I, std::tuple< Types... > >));
+                void* ptr = (typename std::allocator_traits< Allocator >::template rebind_alloc< T >(get_allocator())).allocate(sizeof(T));
                 try
                 {
                     ptr = (void*)new (ptr) T(std::forward< Ts >(ts)...);
                 }
                 catch (...)
                 {
-                    (typename std::allocator_traits< Allocator >::template rebind_alloc< T >((Allocator&)*this)).deallocate((T*)ptr, sizeof(std::tuple_element_t< I, std::tuple< Types... > >));
+                    (typename std::allocator_traits< Allocator >::template rebind_alloc< T >(get_allocator())).deallocate((T*)ptr, sizeof(T));
                     throw;
                 }
 

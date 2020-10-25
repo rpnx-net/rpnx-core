@@ -12,15 +12,23 @@ struct bar;
 struct foo
 {
     rpnx::derivator<void, foo, bar> thing_foo;
+
+    foo() { std::cout << "foo::foo()" << std::endl;
+    }
+
+    ~foo() { std::cout << "foo::~foo()" << std::endl;
+    }
 };
 
 struct bar
 {
     std::string value;
-    bar(std::string const & init)
-    : value(init)
-    {
 
+
+    bar(std::string const & init)
+    : value(init) { std::cout << "bar::bar(...)" << std::endl; }
+
+    ~bar() { std::cout << "bar::~bar()" << std::endl;
     }
    rpnx::derivator<void, foo, bar> thing_bar;
    std::string test()
@@ -57,4 +65,9 @@ int main()
 
     std::cout << std::boolalpha << "valueless? " << the_bar.thing_bar.holds_alternative<void>() << std::endl;
 
+    std::cout << "Replace the_bar.thing_bar" << std::endl;
+
+    the_bar.thing_bar.emplace< bar >("blah");
+
+    std::cout << "End main" << std::endl;
 }
