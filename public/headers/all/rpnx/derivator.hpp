@@ -205,7 +205,7 @@ namespace rpnx
             void* ptr = (typename std::allocator_traits< Allocator >::template rebind_alloc< T >(get_allocator())).allocate(sizeof(T));
             try
             {
-                ptr = (void*)new (ptr) T(std::forward< Ts >(ts)...);
+                ptr = (void*)new (ptr) T(value);
             }
             catch (...)
             {
@@ -214,8 +214,33 @@ namespace rpnx
             }
 
             destroy();
-            m_vtab = &derivator_vtab_v< I, T >, Allocator >;
+            m_vtab = &derivator_vtab_v< I, T, Allocator >;
             m_value = reinterpret_cast< void* >(ptr);
+
+            return *this;
+        }
+
+        template <typename T>
+        basic_derivator<Allocator, Types...> & operator=(T && value)
+        {
+            constexpr const int I = tuple_type_index<T, std::tuple<Types...> >::value;
+            static_assert(I != -1, "Cannot assign type T to incompatible derivator");
+
+            void* ptr = (typename std::allocator_traits< Allocator >::template rebind_alloc< T >(get_allocator())).allocate(sizeof(T));
+            try
+            {
+                ptr = (void*)new (ptr) T(std::move(value));
+            }
+            catch (...)
+            {
+                (typename std::allocator_traits< Allocator >::template rebind_alloc< T >(get_allocator())).deallocate((T*)ptr, sizeof(T));
+                throw;
+            }
+
+            destroy();
+            m_vtab = &derivator_vtab_v< I, T, Allocator >;
+            m_value = reinterpret_cast< void* >(ptr);
+            return *this;
         }
 
         template < size_t I, typename... Ts >
