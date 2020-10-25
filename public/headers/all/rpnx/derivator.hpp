@@ -280,6 +280,7 @@ namespace rpnx
             }
             else
             {
+                // Swap with incompatible allocators is undefined per standard.
                 RPNX_ASSERT(static_cast<allocator_type&>(*this) == static_cast<allocator_type&>(other));
             }
             std::swap(m_vtab, other.m_vtab);

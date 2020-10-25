@@ -14,7 +14,7 @@ namespace rpnx
     }
 }
 
-#ifdef NDEBUG
+#if defined(NDEBUG) || defined(_NDEBUG)
 #if defined(__GNUC__) && defined(__cplusplus)
 #define RPNX_ASSERT(x) __builtin_assume(x)
 #elif defined(__clang__)
