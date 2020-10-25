@@ -139,6 +139,7 @@ namespace rpnx
                 m_vtab->m_deleter(get_allocator(), m_value);
                 m_value = nullptr;
             }
+            make_void();
         }
 
         template < typename T, typename... Ts >
