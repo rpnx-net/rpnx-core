@@ -100,7 +100,7 @@ namespace rpnx
       private:
         void make_void()
         {
-            m_vtab = &derivator_vtab_v< tuple_type_index<void, Types...>::value, void >
+            m_vtab = &derivator_vtab_v< tuple_type_index<void, std::tuple<Types...>>::value, void, Allocator >;
             m_value = nullptr;
         }
 
