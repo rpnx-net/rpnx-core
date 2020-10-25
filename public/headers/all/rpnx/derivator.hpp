@@ -25,7 +25,8 @@ namespace rpnx
     {
         std::type_index m_type_index = typeid(void);
         void (*m_deleter)(Allocator const& a, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
-        void* (*m_construct)(Allocator const & alloc, typename std::allocator_traits< Allocator >::const_void_pointer) = nullptr;
+        void* (*m_construct_copy)(Allocator const & alloc, typename std::allocator_traits< Allocator >::const_void_pointer) = nullptr;
+        void* (*m_construct_move)(Allocator const & alloc, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
         bool (*m_equals)(typename std::allocator_traits< Allocator >::void_pointer, typename std::allocator_traits< Allocator >::void_pointer) = nullptr;
         bool (*m_less)(void const*, void const*) = nullptr;
         int m_index = -1;
@@ -46,7 +47,7 @@ namespace rpnx
         }
 
         template <typename T, typename Alloc>
-        void * derivator_new(Alloc const & alloc, void const * src)
+        void * derivator_construct_copy(Alloc const & alloc, void const * src)
         {
             if constexpr (!std::is_void_v< T >)
             {
@@ -54,6 +55,26 @@ namespace rpnx
                 try
                 {
                     return (void*)new (dest) T(*reinterpret_cast< T const* >(src));
+                }
+                catch (...)
+                {
+                    (typename std::allocator_traits< Alloc >::template rebind_alloc< T >(alloc)).deallocate((T*)dest, sizeof(T));
+                    throw;
+                }
+            }
+            else
+                return nullptr;
+        }
+
+        template <typename T, typename Alloc>
+        void * derivator_construct_move(Alloc const & alloc, void * src)
+        {
+            if constexpr (!std::is_void_v< T >)
+            {
+                void* dest = (typename std::allocator_traits< Alloc >::template rebind_alloc< T >(alloc)).allocate(sizeof(T));
+                try
+                {
+                    return (void*)new (dest) T(std::move(*reinterpret_cast< T const* >(src)));
                 }
                 catch (...)
                 {
@@ -72,7 +93,8 @@ namespace rpnx
     {
         derivator_vtab< Allocator > tb;
         tb.m_type_index = typeid(T);        
-        tb.m_construct = &detail::derivator_new< T, Allocator >;
+        tb.m_construct_copy = &detail::derivator_construct_copy< T, Allocator >;
+        tb.m_construct_move = &detail::derivator_construct_move< T, Allocator >;
         tb.m_deleter = &detail::derivator_deletor< T, Allocator >;
         
         // TODO: It would be nice to support comparisons where possible, fix this.
@@ -113,7 +135,7 @@ namespace rpnx
         {
             if (other.m_value)
             {
-                m_value = other.m_vtab->m_construct(get_allocator(), other.m_value);
+                m_value = other.m_vtab->m_construct_copy(get_allocator(), other.m_value);
                 m_vtab = other.m_vtab;
             }
         }
@@ -147,7 +169,7 @@ namespace rpnx
         {
             static_assert(std::is_same_v<Allocator, std::allocator<void>>, "Not implemented");
             assert(other.m_vtab != nullptr);
-            void *value = other.m_vtab->m_construct(other, other.m_value );
+            void *value = other.m_vtab->m_construct_copy(other, other.m_value );
             m_value = value;
             m_vtab = other.m_vtab;
             return *this;
@@ -172,6 +194,28 @@ namespace rpnx
         {
             static_assert(tuple_type_index< T, std::tuple< Types... >>::value != -1, "The target type T is not allowed");
             emplace< tuple_type_index< T, std::tuple< Types... > >::value >(std::forward< Ts >(ts)...);
+        }
+
+        template <typename T>
+        basic_derivator<Allocator, Types...> & operator=(T const & value)
+        {
+            constexpr const int I = tuple_type_index<T, std::tuple<Types...> >::value;
+            static_assert(I != -1, "Cannot assign type T to incompatible derivator");
+
+            void* ptr = (typename std::allocator_traits< Allocator >::template rebind_alloc< T >(get_allocator())).allocate(sizeof(T));
+            try
+            {
+                ptr = (void*)new (ptr) T(std::forward< Ts >(ts)...);
+            }
+            catch (...)
+            {
+                (typename std::allocator_traits< Allocator >::template rebind_alloc< T >(get_allocator())).deallocate((T*)ptr, sizeof(T));
+                throw;
+            }
+
+            destroy();
+            m_vtab = &derivator_vtab_v< I, T >, Allocator >;
+            m_value = reinterpret_cast< void* >(ptr);
         }
 
         template < size_t I, typename... Ts >
