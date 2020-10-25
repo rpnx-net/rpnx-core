@@ -20,10 +20,6 @@
 namespace rpnx
 {
 
-    struct foo
-    {
-    };
-
     template < typename Allocator >
     struct derivator_vtab
     {
