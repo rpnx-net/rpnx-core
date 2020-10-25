@@ -1,7 +1,7 @@
 /*
 Monoque Data Structure
 
-Copyright (c) 2017, 2018 Ryan P. Nicholl <exaeta@protonmail.com> http://rpnx.net/
+Copyright (c) 2017, 2018 Ryan P. Nicholl <rnicholl@protonmail.com> http://rpnx.net/
  -- Please let me know if you find this structure useful, thanks! 
  
 All rights reserved.
