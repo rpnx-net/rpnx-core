@@ -26,7 +26,21 @@ struct bar
 
 
     bar(std::string const & init)
-    : value(init) { std::cout << "bar::bar(...)" << std::endl; }
+    : value(init) { std::cout << "bar::bar(\""<< init <<"\")" << std::endl; }
+
+    bar(bar const& other) 
+    {
+        value = other.value;
+        std::cout << "bar::bar(bar const&)" << std::endl;
+    }
+
+    bar(bar && other) 
+    {
+        value = std::move(other.value);
+        std::cout << "bar::bar(bar &&)" << std::endl;
+    }
+
+
 
     ~bar() { std::cout << "bar::~bar()" << std::endl;
     }
@@ -69,5 +83,7 @@ int main()
 
     the_bar.thing_bar.emplace< bar >("blah");
 
-    std::cout << "End main" << std::endl;
+    std::cout << "Try assignment operator" << std::endl;
+
+    the_bar.thing_bar = bar("test");
 }
