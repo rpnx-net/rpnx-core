@@ -2,6 +2,8 @@
 // All rights reserved
 // See rpnx-core/LICENSE.txt
 
+// Warning: basic_derivator custom allocators DO NOT currently work.
+
 #ifndef RPNX_DERIVATOR_HPP
 #define RPNX_DERIVATOR_HPP
 
@@ -90,8 +92,16 @@ namespace rpnx
     template < typename Allocator, typename... Types >
     class basic_derivator : private Allocator
     {
+        static_assert(std::is_same_v<std::allocator<void>, Allocator>, "Custom allocators don't work yet.");
+
         typename std::allocator_traits< Allocator >::void_pointer m_value;
         derivator_vtab< Allocator >* m_vtab;
+      private:
+        void make_void()
+        {
+            m_vtab = &derivator_vtab_v< tuple_type_index<void, Types...>::value, void >
+            m_value = nullptr;
+        }
 
       public:
         basic_derivator() noexcept(noexcept(Allocator()))
@@ -106,6 +116,15 @@ namespace rpnx
                 m_value = other.m_vtab->m_construct(get_allocator(), other.m_value);
                 m_vtab = other.m_vtab;
             }
+        }
+
+        basic_derivator(basic_derivator<Allocator, Types...> && other )
+        : Allocator(other.get_allocator()), m_value(nullptr), m_vtab(nullptr)
+        {
+            make_void();
+            std::swap(m_vtab, other.m_vtab);
+            std::swap(m_value, other.m_value);
+
         }
 
         Allocator const& get_allocator() const noexcept 
@@ -156,7 +175,10 @@ namespace rpnx
             }
         }
 
-        std::size_t index() const noexcept { return m_vtab->m_index; }
+        /** Returns the index of the currently held type
+         * Note: this can be -1 if no value is held and void does not appear in the type list.
+         */
+        int index() const noexcept { return m_vtab->m_index; }
 
         template < int I >
         std::tuple_element_t< I, std::tuple< Types... > >& as()
