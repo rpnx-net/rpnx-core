@@ -123,6 +123,15 @@ namespace rpnx
             m_value = nullptr;
         }
 
+        void destroy()
+        {
+            if (m_value && m_vtab)
+            {
+                m_vtab->m_deleter(get_allocator(), m_value);
+            }
+            make_void();
+        }
+
       public:
         using allocator_type = Allocator;
 
@@ -180,14 +189,7 @@ namespace rpnx
             return *this;
         }
 
-        void destroy()
-        {
-            if (m_value && m_vtab)
-            {
-                m_vtab->m_deleter(get_allocator(), m_value);
-            }
-            make_void();
-        }
+        
 
         template < typename T, typename... Ts >
         void emplace(Ts&&... ts)
