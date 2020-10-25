@@ -174,7 +174,7 @@ namespace rpnx
         template < typename T, typename... Ts >
         void emplace(Ts&&... ts)
         {
-            static_assert(tuple_type_index< T, std::tuple< Types... >::value != -1, "The target type T is not allowed");
+            static_assert(tuple_type_index< T, std::tuple< Types... >>::value != -1, "The target type T is not allowed");
             emplace< tuple_type_index< T, std::tuple< Types... > >::value >(std::forward< Ts >(ts)...);
         }
 
