@@ -122,7 +122,7 @@ namespace rpnx
         }
 
         basic_derivator(basic_derivator<Allocator, Types...> && other )
-        : Allocator(other.get_allocator()), m_value(nullptr), m_vtab(nullptr)
+        : Allocator(other.get_allocator())
         {
             make_void();
             std::swap(m_vtab, other.m_vtab);
@@ -166,7 +166,6 @@ namespace rpnx
             if (m_value && m_vtab)
             {
                 m_vtab->m_deleter(get_allocator(), m_value);
-                m_value = nullptr;
             }
             make_void();
         }
