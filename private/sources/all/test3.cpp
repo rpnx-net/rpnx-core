@@ -51,6 +51,21 @@ struct bar
    }
 };
 
+class tester_c
+{
+public:
+    void operator()(foo const &)
+    {
+        std::cout << "tester foo" << std::endl;
+    }
+
+    void operator()(bar const &)
+    {
+        std::cout << "tester bar" << std::endl;
+    }
+
+};
+
 int main()
 {
     rpnx::derivator<int, std::string> test;
@@ -86,4 +101,8 @@ int main()
     std::cout << "Try assignment operator" << std::endl;
 
     the_bar.thing_bar = bar("test");
+
+    tester_c tester_v;
+
+    rpnx::visit(tester_v, the_bar.thing_bar);
 }
