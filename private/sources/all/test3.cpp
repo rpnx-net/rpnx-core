@@ -74,22 +74,22 @@ public:
 int main()
 {
     rpnx::derivator<int, std::string> test;
-    test.as_checked<0>() = 4;
+    test.get<0>() = 4;
 
-    std::cout << test.as_checked<0>()  << std::endl;
-    std::cout << test.as_checked<int>()  << std::endl;
+    std::cout << test.get<0>()  << std::endl;
+    std::cout << test.get<int>()  << std::endl;
 
     test.emplace<1>("Testing!");
 
-    std::cout << test.as_checked<1>() << std::endl;
-    std::cout << test.as_checked<std::string>() << std::endl;
+    std::cout << test.get<1>() << std::endl;
+    std::cout << test.get<std::string>() << std::endl;
 
     foo f;
 
     f.thing_foo.emplace<foo>();
-    f.thing_foo.as_checked<foo>().thing_foo.emplace<bar>("penguin");
+    f.thing_foo.get<foo>().thing_foo.emplace<bar>("penguin");
 
-    bar & the_bar = f.thing_foo.as_checked<foo>().thing_foo.as_checked<bar>();
+    bar & the_bar = f.thing_foo.get<foo>().thing_foo.get<bar>();
 
     std::cout << the_bar.test() << std::endl;
 

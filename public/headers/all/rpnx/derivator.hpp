@@ -280,7 +280,7 @@ namespace rpnx
         int index() const noexcept { return m_vtab->m_index; }
 
         template < int I >
-        std::tuple_element_t< I, std::tuple< Types... > >& as_checked()
+        std::tuple_element_t< I, std::tuple< Types... > >& get()
         {
             if (m_vtab->m_index != I) throw std::invalid_argument("derivator");
 
@@ -288,7 +288,7 @@ namespace rpnx
         }
 
         template < int I >
-        std::tuple_element_t< I, std::tuple< Types... > > const& as_checked() const
+        std::tuple_element_t< I, std::tuple< Types... > > const& get() const
         {
             if (m_vtab->m_index != I) throw std::invalid_argument("derivator");
 
@@ -296,19 +296,19 @@ namespace rpnx
         }
 
         template < typename T >
-        auto& as_checked()
+        auto& get()
         {
-            static_assert(tuple_type_index< T, std::tuple< Types... > >::value != -1, "The type T in derivator<Types...>::as_checked<T>() is not present "
+            static_assert(tuple_type_index< T, std::tuple< Types... > >::value != -1, "The type T in derivator<Types...>::get<T>() is not present "
                                                                                       "in Types...");
-            return as_checked< tuple_type_index< T, std::tuple< Types... > >::value >();
+            return get< tuple_type_index< T, std::tuple< Types... > >::value >();
         }
 
         template < typename T >
-        auto const& as_checked() const
+        auto const& get() const
         {
-            static_assert(tuple_type_index< T, std::tuple< Types... > >::value != -1, "The type T in derivator<Types...>::as_checked<T>() is not present "
+            static_assert(tuple_type_index< T, std::tuple< Types... > >::value != -1, "The type T in derivator<Types...>::get<T>() is not present "
                                                                                       "in Types...");
-            return as_checked< tuple_type_index< T, std::tuple< Types... > >::value >();
+            return get< tuple_type_index< T, std::tuple< Types... > >::value >();
         }
 
         template < int I >
@@ -326,7 +326,7 @@ namespace rpnx
         template < typename T >
         auto& as()
         {
-            static_assert(tuple_type_index< T, std::tuple< Types... > >::value != -1, "The type T in derivator<Types...>::as_checked<T>() is not present "
+            static_assert(tuple_type_index< T, std::tuple< Types... > >::value != -1, "The type T in derivator<Types...>::get<T>() is not present "
                                                                                       "in Types...");
             return as< tuple_type_index< T, std::tuple< Types... > >::value >();
         }
@@ -334,7 +334,7 @@ namespace rpnx
         template < typename T >
         auto const& as() const
         {
-            static_assert(tuple_type_index< T, std::tuple< Types... > >::value != -1, "The type T in derivator<Types...>::as_checked<T>() is not present "
+            static_assert(tuple_type_index< T, std::tuple< Types... > >::value != -1, "The type T in derivator<Types...>::get<T>() is not present "
                                                                                       "in Types...");
             return as< tuple_type_index< T, std::tuple< Types... > >::value >();
         }
