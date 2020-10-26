@@ -387,11 +387,11 @@ namespace rpnx
             using derivator_t = std::remove_all_extents_t<std::remove_reference_t<Derivator>>;
             if constexpr (! std::is_void_v< derivator_element<I, derivator_t>::type >)
             {
-                visitor(std::forward<Derivator>(derivator).as<I>());
+                std::forward<Visitor>(visitor)(std::forward<Derivator>(derivator).as<I>());
             }
             else
             {
-                visitor();
+                std::forward<Visitor>(visitor)();
             }
         }
 
