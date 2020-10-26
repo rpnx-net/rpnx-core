@@ -444,7 +444,7 @@ namespace rpnx
     template <typename Visitor, typename Allocator, typename ... Types>
     void visit(Visitor && vistor, basic_derivator<Allocator, Types...> && derivator)
     {
-        static const constexpr auto dispatch_table = derivator_dispatch_table<Visitor, basic_derivator<Allocator, Types...> &&, std::tuple_size<std::tuple<Types...>>::value>::generate();
+        static const constexpr auto dispatch_table = detail::derivator_dispatch_table<Visitor, basic_derivator<Allocator, Types...> &&, std::tuple_size<std::tuple<Types...>>::value>::generate();
         RPNX_ASSERT(derivator.index() != -1);
         auto function_pointer = dispatch_table[derivator.index()];
         function_pointer(std::forward<Visitor>(vistor), std::forward<basic_derivator<Allocator, Types...> &&>(derivator));        
@@ -453,7 +453,7 @@ namespace rpnx
     template <typename Visitor, typename Allocator, typename ... Types>
     void visit(Visitor && vistor, basic_derivator<Allocator, Types...> const & derivator)
     {
-        static const constexpr auto dispatch_table = derivator_dispatch_table<Visitor, basic_derivator<Allocator, Types...> const&, std::tuple_size<std::tuple<Types...>>::value>::generate();
+        static const constexpr auto dispatch_table = detail::derivator_dispatch_table<Visitor, basic_derivator<Allocator, Types...> const&, std::tuple_size<std::tuple<Types...>>::value>::generate();
         RPNX_ASSERT(derivator.index() != -1);
         auto  function_pointer = dispatch_table[derivator.index()];
         function_pointer(std::forward<Visitor>(vistor), std::forward<basic_derivator<Allocator, Types...> const &>(derivator));        
