@@ -64,6 +64,11 @@ public:
         std::cout << "tester bar" << std::endl;
     }
 
+    void operator()()
+    {
+        std::cout << "tester Valueless" << std::endl;
+    }
+
 };
 
 int main()
@@ -105,4 +110,10 @@ int main()
     tester_c tester_v;
 
     rpnx::visit(tester_v, the_bar.thing_bar);
+
+    std::cout << "Valueless visit test" << std::endl;
+
+    rpnx::derivator<void, bar> d;
+    rpnx::visit(tester_v, d);
+
 }

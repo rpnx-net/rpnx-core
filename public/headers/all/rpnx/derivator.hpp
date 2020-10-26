@@ -389,6 +389,10 @@ namespace rpnx
             {
                 visitor(std::forward<Derivator>(derivator).as<I>());
             }
+            else
+            {
+                visitor();
+            }
         }
 
         template<size_t I, typename Derivator>
