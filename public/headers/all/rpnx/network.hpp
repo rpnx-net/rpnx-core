@@ -759,7 +759,7 @@ public:
 
       #else
 
-      std::vector<std::byte> data(begin_data, end_data);
+      std::vector<char> data(begin_data, end_data);
       
       std::size_t st = 0;
 

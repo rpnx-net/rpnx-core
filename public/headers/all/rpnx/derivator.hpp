@@ -381,13 +381,17 @@ namespace rpnx
 
     namespace detail
     {
+        template<size_t I, typename Derivator>
+        struct derivator_element;
+
+      
         template<typename Visitor, typename Derivator, size_t I>
         void derivator_dispatch(Visitor && visitor, Derivator && derivator)
         {
             using derivator_t = std::remove_all_extents_t<std::remove_reference_t<Derivator>>;
-            if constexpr (! std::is_void_v< derivator_element<I, derivator_t>::type >)
+            if constexpr (! std::is_void_v< typename derivator_element<I, derivator_t>::type >)
             {
-                std::forward<Visitor>(visitor)(std::forward<Derivator>(derivator).as<I>());
+                std::forward<Visitor>(visitor)(std::forward<Derivator>(derivator).template as<I>());
             }
             else
             {
@@ -395,8 +399,6 @@ namespace rpnx
             }
         }
 
-        template<size_t I, typename Derivator>
-        struct derivator_element;
 
         template <size_t I, typename Allocator, typename ... Types>
         struct derivator_element<I, basic_derivator<Allocator, Types...>>
