@@ -172,7 +172,7 @@ namespace rpnx
       return addr;
 #endif
 #ifdef __linux__
-      return { m_addr[0] | (m_addr[1] << 8) | (m_addr[3] << 16) | (m_addr[3] << 24) };
+      return {static_cast<in_addr_t>(m_addr[0] | (m_addr[1] << 8) | (m_addr[3] << 16) | (m_addr[3] << 24) )};
 #endif
     }
 
@@ -690,8 +690,8 @@ public:
               shutdown(m_socket, SD_BOTH);
               closesocket(m_socket);
 #else
-              shutdown(m_socket, SD_RDWR);
-              close(m_socket);
+              shutdown(m_socket, SHUT_RDWR);
+              ::close(m_socket);
 #endif
               m_socket = -1;
           }
