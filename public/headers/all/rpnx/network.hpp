@@ -104,6 +104,9 @@ namespace rpnx
     void net_send(ip4_udp_socket& socket, ip4_udp_endpoint const& to, It input_begin, It input_end);
 
     template <typename It>
+    void net_send(ip4_tcp_connection& socket, It input_begin, It input_end);
+
+    template <typename It>
     auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& from, It output_begin, It output_bounds_check)->It;
 
     template <typename It>
@@ -583,6 +586,14 @@ public:
           std::swap(other.m_socket, m_socket);
       }
 
+      /** Destructor of the socket. Either calls abort() or close() (it is unspecified which is called)
+      */
+      ~ip4_tcp_connection()
+      {
+          close(); // TODO: Should be 'abort' by default
+          // abort isn't yet implemented.
+      }
+
       /**
         Create a socket from a native SOCKET object.
         Ownership of the SOCKET is assumed by this class.
@@ -656,6 +667,36 @@ public:
       {
           return m_socket != -1;
       }
+
+
+      template <typename It>
+
+      void send(It begin, It end)
+      {
+          net_send(*this, begin, end);
+      }
+
+      /* TODO
+      void abort()
+      {
+
+      }*/
+
+      void close()
+      {
+          if (m_socket != -1)
+          {
+#ifdef _WIN32
+              shutdown(m_socket, SD_BOTH);
+              closesocket(m_socket);
+#else
+              shutdown(m_socket, SD_RDWR);
+              close(m_socket);
+#endif
+              m_socket = -1;
+          }
+
+      }
   };
 
   template <typename It>
@@ -664,7 +705,7 @@ public:
       #ifdef _WIN32
       detail::wsa_intializer::singleton();
       sockaddr_in dest = to.native();
-      std::vector<std::byte> data(begin_packet, end_packet);
+      std::vector<char> data(begin_packet, end_packet);
 
       auto result = sendto(socket.native(), (char const*)data.data(), data.size(), 0, (sockaddr*)&dest, sizeof(dest));
       if (result == SOCKET_ERROR)
@@ -692,11 +733,12 @@ public:
       #ifdef _WIN32
       detail::wsa_intializer::singleton();
       
-      std::vector<std::byte> data(begin_data, end_data);
+      std::vector<char> data;
+      data.assign(begin_data, end_data);
 
       // TODO: Right now we don't support sending more than 2^32 bytes at once on windows
       // Ideally we should fix this
-      if (data.size() >= INT_MAX) throw std::bad_alloc("send too large");
+      if (data.size() >= INT_MAX) throw std::invalid_argument("send too large");
       
       std::size_t st = 0;
 
@@ -710,7 +752,7 @@ public:
           }
           else
           {
-              throw network_error("rpnx::net_send", get_wsa_error_code());
+              throw network_error("rpnx::net_send", get_os_network_error_code());
           }
 
       }
