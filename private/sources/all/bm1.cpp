@@ -13,8 +13,6 @@ int main()
 	std::vector<char> input2(input.begin(), input.end());
 
 	std::vector<std::vector<char>> input3 { input2, {}, input2 };
-
-
 	std::vector<std::uint8_t> output;
 	rpnx::quick_functor_serialize(input3, [&output](std::size_t n)
 		{
