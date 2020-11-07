@@ -459,7 +459,7 @@ namespace rpnx
         }
     };
 
-        template < typename It >
+    template < typename It >
     struct synchronous_iterator_serial_traits< std::uint32_t, It >
     {
         static inline constexpr auto serialize(std::uint32_t val, It outIt) -> It
@@ -511,7 +511,7 @@ namespace rpnx
         }
     };
 
-     template < typename It >
+    template < typename It >
     struct synchronous_iterator_serial_traits< std::int64_t, It >
     {
         static inline constexpr auto serialize(std::int64_t val, It outIt) -> It
@@ -540,7 +540,6 @@ namespace rpnx
             return in;
         }
     };
-
 
     template < typename It >
     struct synchronous_iterator_serial_traits< std::int8_t, It >
@@ -796,17 +795,16 @@ namespace rpnx
             }
         }
 
-        
-        static inline constexpr auto deserialize(std::vector< T2, Alloc > & val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::vector< T2, Alloc >& val, ItFunctor in_functor)
         {
-            if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size()) 
+            if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size())
             {
                 std::size_t sz;
                 synchronous_functor_serial_traits< uintany, ItFunctor >::deserialize(sz, in_functor);
                 std::size_t total_size = sz * serial_traits< typename std::vector< T2, Alloc >::value_type >::fixed_serial_size();
 
                 auto it = in_functor(total_size);
-                for (std::size_t i = 0; i != sz; i++) 
+                for (std::size_t i = 0; i != sz; i++)
                 {
                     T2 t;
                     it = synchronous_iterator_serial_traits< T2, decltype(it) >::deserialize(t, it);
@@ -819,7 +817,7 @@ namespace rpnx
             {
                 std::size_t sz;
                 synchronous_functor_serial_traits< uintany, ItFunctor >(sz, in_functor);
-                
+
                 for (std::size_t i = 0; i != sz; i++)
                 {
                     T2 t;
@@ -829,9 +827,7 @@ namespace rpnx
 
                 return;
             }
-
         }
-        
     };
 
     /*template <typename I>
