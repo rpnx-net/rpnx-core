@@ -1,49 +1,107 @@
+#include "rpnx/serial_traits.hpp"
 #include <future>
 #include <iostream>
+#include <string_view>
 
-
-
-class foo
+template < typename T >
+void test(std::string_view const& str, T const& val, std::vector< char > const& expected)
 {
-  public:
-    foo() 
-    {
-        std::cout << "foo()" << std::endl;
+    std::vector< char > output;
+    std::vector< char > output2;
 
+    rpnx::quick_functor_serialize(val, [&output](std::size_t n) {
+        std::size_t size_old = output.size();
+        output.resize(size_old + n);
+        return output.begin() + size_old;
+    });
+
+    rpnx::quick_iterator_serialize(val, std::back_inserter(output2));
+
+    if (output == expected)
+    {
+        std::cerr << str << ": Serialized generator output matches expected output." << std::endl;
+    }
+    else
+    {
+        throw std::runtime_error((std::string(str) + ": Serialized generator output does not match expected output").c_str());
     }
 
-    foo(foo const&)
+    if (output2 == expected)
     {
-        std::cout << "foo(foo const&)" << std::endl;
+        std::cerr << str << ": Serialized iterator output matches expected output." << std::endl;
     }
-
-    ~foo()
+    else
     {
-        std::cout << "foo(foo const&)" << std::endl;
-    }
-
-    foo(foo&&) 
-    {
-        std::cout << "foo(foo&&)" << std::endl;
-    }
-
-    void operator()()
-    {
-        std::cout << "foo::operator()()" << std::endl;
+        throw std::runtime_error((std::string(str) + ": Serialized iterator output does not match expected output").c_str());
     }
 
     
-};
+    T val_2{};
+    std::size_t used = 0;
 
+    rpnx::quick_functor_deserialize(val_2, [&](std::size_t n) {
+        auto it = output.begin() + used;
+        used += n;
+        if (used > output.size())
+            throw std::runtime_error((std::string(str) + ": deserialization out of bounds").c_str());
+        return it;
+    });
+
+    if (val == val_2)
+    {
+        std::cerr << str << ": Deserialized value matches expected value." << std::endl;
+    }
+    else
+    {
+        throw std::runtime_error((std::string(str) + ": Deserialized value does not equal expected value").c_str());
+    }
+    
+}
 
 int main()
 {
-    foo f;
-    std::function< void() > task;
-    std::cout << "A" << std::endl;
-    task = std::function< void() >(f);
-    std::cout << "B" << std::endl;
-    std::function< void() > task2 = std::move(task);
-    std::cout << "C" << std::endl;
+    {
+        int8_t val = 4;
+        test("int8_t", val, {4});
+    }
 
+    {
+        int16_t val = 4;
+        test("int16_t", val, {4, 0});
+    }
+
+    {
+        int32_t val = 4;
+        test("int32_t", val, {4, 0, 0, 0});
+    }
+
+    {
+        int64_t val = 4;
+        test("int64_t", val, {4, 0, 0, 0, 0, 0, 0, 0});
+    }
+
+    {
+        uint8_t val = 4;
+        test("uint8_t", val, {4});
+    }
+
+    {
+        uint16_t val = 4;
+        test("uint16_t", val, {4, 0});
+    }
+
+    {
+        uint32_t val = 4;
+        test("uint32_t", val, {4, 0, 0, 0});
+    }
+
+    {
+        uint64_t val = 4;
+        test("uint64_t", val, {4, 0, 0, 0, 0, 0, 0, 0});
+    }
+
+    {
+        std::vector< int16_t > val{4, 5};
+        test("std::vector<int16_t>", val, {2, 4, 0, 5, 0});
+    }
 }
