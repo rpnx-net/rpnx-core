@@ -9,7 +9,7 @@ void test(std::string_view const& str, T const& val, std::vector< char > const& 
     std::vector< char > output;
     std::vector< char > output2;
 
-    rpnx::quick_functor_serialize(val, [&output](std::size_t n) {
+    rpnx::quick_generator_serialize(val, [&output](std::size_t n) {
         std::size_t size_old = output.size();
         output.resize(size_old + n);
         return output.begin() + size_old;
@@ -37,15 +37,18 @@ void test(std::string_view const& str, T const& val, std::vector< char > const& 
 
     
     T val_2{};
+
     std::size_t used = 0;
 
-    rpnx::quick_functor_deserialize(val_2, [&](std::size_t n) {
+    rpnx::quick_generator_deserialize(val_2, [&](std::size_t n) {
         auto it = output.begin() + used;
         used += n;
         if (used > output.size())
             throw std::runtime_error((std::string(str) + ": deserialization out of bounds").c_str());
         return it;
     });
+
+    // Note: not checking quick_iterator_deserialize for now...
 
     if (val == val_2)
     {

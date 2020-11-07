@@ -11,7 +11,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /*
 This is currently a work in progress. It's a version 2 of the original version I published as a separate library.
-This version should perform better due to the inclusion of functor interfaces, which should, at least in theory,
+This version should perform better due to the inclusion of generator interfaces, which should, at least in theory,
 optimize much better than a strictly iterator based approach, while maintaining safety.
 
 
@@ -49,8 +49,8 @@ namespace rpnx
     template < typename T >
     struct serial_traits;
 
-    template < typename T, typename ItFunctor >
-    struct synchronous_functor_serial_traits;
+    template < typename T, typename ItGenerator >
+    struct synchronous_generator_serial_traits;
 
     template < typename T, typename It >
     struct synchronous_iterator_serial_traits;
@@ -202,49 +202,49 @@ namespace rpnx
     {
     };
 
-    // The following 4 specializations are for serial synchronous functor interfaces for the
+    // The following 4 specializations are for serial synchronous generator interfaces for the
     // unsigned integers
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::uint8_t, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::uint8_t, ItGenerator >
     {
-        static inline constexpr auto serialize(std::uint8_t val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::uint8_t val, ItGenerator out_generator)
         {
-            auto it = out_functor(1);
+            auto it = out_generator(1);
             *it++ = val;
         }
 
-        static inline constexpr auto deserialize(std::uint8_t& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::uint8_t& val, ItGenerator in_generator)
         {
-            auto it = in_functor(1);
+            auto it = in_generator(1);
             val = *it++;
         }
     };
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::uint16_t, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::uint16_t, ItGenerator >
     {
-        static inline constexpr auto serialize(std::uint16_t val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::uint16_t val, ItGenerator out_generator)
         {
-            auto it = out_functor(2);
+            auto it = out_generator(2);
             *it++ = val & 0xFF;
             *it = (val >> 8) & 0xFF;
         }
 
-        static inline constexpr auto deserialize(std::uint16_t& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::uint16_t& val, ItGenerator in_generator)
         {
-            auto it = in_functor(2);
+            auto it = in_generator(2);
             val = *it++;
             val |= (*it << 8);
         }
     };
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::uint32_t, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::uint32_t, ItGenerator >
     {
-        static inline constexpr auto serialize(std::uint32_t val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::uint32_t val, ItGenerator out_generator)
         {
-            auto it = out_functor(4);
+            auto it = out_generator(4);
             *it++ = val & 0xFF;
             *it++ = (val >> 8) & 0xFF;
             *it++ = (val >> 16) & 0xFF;
@@ -253,9 +253,9 @@ namespace rpnx
             // synchronous_iterator_serialize_traits<std::uint32_t, std::remove_reference_t<decltype(*it)>>(it, val);
         }
 
-        static inline constexpr auto deserialize(std::uint32_t& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::uint32_t& val, ItGenerator in_generator)
         {
-            auto it = in_functor(4);
+            auto it = in_generator(4);
             val = *it++;
             val |= (*it++ << 8);
             val |= (*it++ << 16);
@@ -263,12 +263,12 @@ namespace rpnx
         }
     };
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::uint64_t, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::uint64_t, ItGenerator >
     {
-        static inline constexpr auto serialize(std::uint64_t val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::uint64_t val, ItGenerator out_generator)
         {
-            auto it = out_functor(8);
+            auto it = out_generator(8);
             *it++ = val & 0xFF;
             *it++ = (val >> 8) & 0xFF;
             *it++ = (val >> 16) & 0xFF;
@@ -281,9 +281,9 @@ namespace rpnx
             // synchronous_iterator_serialize_traits<std::uint32_t, std::remove_reference_t<decltype(*it)>>(it, val);
         }
 
-        static inline constexpr auto deserialize(std::uint64_t& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::uint64_t& val, ItGenerator in_generator)
         {
-            auto it = in_functor(8);
+            auto it = in_generator(8);
             val = *it++;
             val |= (*it++ << 8);
             val |= (*it++ << 16);
@@ -295,46 +295,46 @@ namespace rpnx
         }
     };
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::int8_t, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::int8_t, ItGenerator >
     {
-        static inline constexpr auto serialize(std::int8_t val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::int8_t val, ItGenerator out_generator)
         {
-            auto it = out_functor(1);
+            auto it = out_generator(1);
             *it++ = val;
         }
 
-        static inline constexpr auto deserialize(std::int8_t& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::int8_t& val, ItGenerator in_generator)
         {
-            auto it = in_functor(1);
+            auto it = in_generator(1);
             val = *it++;
         }
     };
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::int16_t, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::int16_t, ItGenerator >
     {
-        static inline constexpr auto serialize(std::int16_t val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::int16_t val, ItGenerator out_generator)
         {
-            auto it = out_functor(2);
+            auto it = out_generator(2);
             *it++ = val & 0xFF;
             *it = (val >> 8) & 0xFF;
         }
 
-        static inline constexpr auto deserialize(std::int16_t& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::int16_t& val, ItGenerator in_generator)
         {
-            auto it = in_functor(2);
+            auto it = in_generator(2);
             val = *it++;
             val |= (*it << 8);
         }
     };
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::int32_t, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::int32_t, ItGenerator >
     {
-        static inline constexpr auto serialize(std::int32_t val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::int32_t val, ItGenerator out_generator)
         {
-            auto it = out_functor(4);
+            auto it = out_generator(4);
             *it++ = val & 0xFF;
             *it++ = (val >> 8) & 0xFF;
             *it++ = (val >> 16) & 0xFF;
@@ -343,9 +343,9 @@ namespace rpnx
             // synchronous_iterator_serialize_traits<std::int32_t, std::remove_reference_t<decltype(*it)>>(it, val);
         }
 
-        static inline constexpr auto deserialize(std::int32_t& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::int32_t& val, ItGenerator in_generator)
         {
-            auto it = in_functor(4);
+            auto it = in_generator(4);
             val = *it++;
             val |= (*it++ << 8);
             val |= (*it++ << 16);
@@ -353,12 +353,12 @@ namespace rpnx
         }
     };
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::int64_t, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::int64_t, ItGenerator >
     {
-        static inline constexpr auto serialize(std::int64_t val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::int64_t val, ItGenerator out_generator)
         {
-            auto it = out_functor(8);
+            auto it = out_generator(8);
             *it++ = val & 0xFF;
             *it++ = (val >> 8) & 0xFF;
             *it++ = (val >> 16) & 0xFF;
@@ -371,9 +371,9 @@ namespace rpnx
             // synchronous_iterator_serialize_traits<std::int32_t, std::remove_reference_t<decltype(*it)>>(it, val);
         }
 
-        static inline constexpr auto deserialize(std::int64_t& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::int64_t& val, ItGenerator in_generator)
         {
-            auto it = in_functor(8);
+            auto it = in_generator(8);
             val = *it++;
             val |= (*it++ << 8);
             val |= (*it++ << 16);
@@ -663,10 +663,10 @@ namespace rpnx
     };
 
     template < typename ItF >
-    struct synchronous_functor_serial_traits< uintany, ItF >
+    struct synchronous_generator_serial_traits< uintany, ItF >
     {
         template < typename Integral >
-        static inline constexpr void deserialize(Integral& i, ItF functor)
+        static inline constexpr void deserialize(Integral& i, ItF generator)
         {
             static_assert(std::is_integral_v< Integral >);
 
@@ -674,7 +674,7 @@ namespace rpnx
             Integral i2 = 0;
             while (true)
             {
-                auto it = functor(1);
+                auto it = generator(1);
                 uint8_t val = *it++;
                 i2 <<= 7;
                 i2 |= val & 0b1111111;
@@ -734,21 +734,21 @@ namespace rpnx
         }
     };
 
-    template < typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::string, ItFunctor >
+    template < typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::string, ItGenerator >
     {
-        static inline constexpr auto serialize(std::string const& val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::string const& val, ItGenerator out_generator)
         {
-            auto it = out_functor(serial_traits< std::string >::serial_size(val));
+            auto it = out_generator(serial_traits< std::string >::serial_size(val));
             it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
             std::copy(val.begin(), val.end(), it);
         }
 
-        static inline constexpr auto deserialize(std::string& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::string& val, ItGenerator in_generator)
         {
             std::size_t count;
-            synchronous_functor_serial_traits< uintany, ItFunctor >::deserialize(count, in_functor);
-            auto it = in_functor(count);
+            synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(count, in_generator);
+            auto it = in_generator(count);
             val.resize(count);
             std::copy_n(it, count, val.begin());
         }
@@ -769,15 +769,15 @@ namespace rpnx
         }
     };
 
-    template < typename T2, typename Alloc, typename ItFunctor >
-    struct synchronous_functor_serial_traits< std::vector< T2, Alloc >, ItFunctor >
+    template < typename T2, typename Alloc, typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::vector< T2, Alloc >, ItGenerator >
     {
         // template <typename T2, typename Alloc2>
-        static inline constexpr auto serialize(std::vector< T2, Alloc > const& val, ItFunctor out_functor)
+        static inline constexpr auto serialize(std::vector< T2, Alloc > const& val, ItGenerator out_generator)
         {
             if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size())
             {
-                auto it = out_functor(serial_traits< std::vector< T2, Alloc > >::serial_size(val));
+                auto it = out_generator(serial_traits< std::vector< T2, Alloc > >::serial_size(val));
                 it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
                 for (T2 const& x : val)
                 {
@@ -786,24 +786,24 @@ namespace rpnx
             }
             else
             {
-                auto it = out_functor(serial_traits< uintany >::serial_size(val.size()));
+                auto it = out_generator(serial_traits< uintany >::serial_size(val.size()));
                 it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
                 for (auto const& x : val)
                 {
-                    synchronous_functor_serial_traits< T2, ItFunctor >::serialize(x, out_functor);
+                    synchronous_generator_serial_traits< T2, ItGenerator >::serialize(x, out_generator);
                 }
             }
         }
 
-        static inline constexpr auto deserialize(std::vector< T2, Alloc >& val, ItFunctor in_functor)
+        static inline constexpr auto deserialize(std::vector< T2, Alloc >& val, ItGenerator in_generator)
         {
             if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size())
             {
                 std::size_t sz;
-                synchronous_functor_serial_traits< uintany, ItFunctor >::deserialize(sz, in_functor);
+                synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
                 std::size_t total_size = sz * serial_traits< typename std::vector< T2, Alloc >::value_type >::fixed_serial_size();
 
-                auto it = in_functor(total_size);
+                auto it = in_generator(total_size);
                 for (std::size_t i = 0; i != sz; i++)
                 {
                     T2 t;
@@ -816,12 +816,12 @@ namespace rpnx
             else
             {
                 std::size_t sz;
-                synchronous_functor_serial_traits< uintany, ItFunctor >(sz, in_functor);
+                synchronous_generator_serial_traits< uintany, ItGenerator >(sz, in_generator);
 
                 for (std::size_t i = 0; i != sz; i++)
                 {
                     T2 t;
-                    synchronous_functor_serial_traits< T2, ItFunctor >::deserialize(t2, in_functor);
+                    synchronous_generator_serial_traits< T2, ItGenerator >::deserialize(t2, in_generator);
                     val.emplace_back(std::move(t));
                 }
 
@@ -839,9 +839,9 @@ namespace rpnx
     */
 
     template < typename T, typename ItF >
-    inline void quick_functor_serialize(T const& t, ItF f)
+    inline void quick_generator_serialize(T const& t, ItF f)
     {
-        synchronous_functor_serial_traits< T, ItF >::serialize(t, f);
+        synchronous_generator_serial_traits< T, ItF >::serialize(t, f);
     }
 
     template < typename T, typename It >
@@ -851,9 +851,9 @@ namespace rpnx
     }
 
     template < typename T, typename ItF >
-    inline void quick_functor_deserialize(T& t, ItF f)
+    inline void quick_generator_deserialize(T& t, ItF f)
     {
-        synchronous_functor_serial_traits< T, ItF >::deserialize(t, f);
+        synchronous_generator_serial_traits< T, ItF >::deserialize(t, f);
     }
 
     template < typename T, typename It >
