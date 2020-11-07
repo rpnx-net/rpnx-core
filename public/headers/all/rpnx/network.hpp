@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <unistd.h>
+#include <sys/epoll.h>
 #endif
 
 #include <climits>
@@ -18,6 +19,9 @@
 #include <assert.h>
 #include <vector>
 #include <iostream>
+#include <functional>
+
+#include <set>
 #include "rpnx/network_error.hpp"
 
 namespace rpnx
@@ -92,6 +96,11 @@ namespace rpnx
     }
     using native_socket_type = int;
 #endif
+
+    class async_service;
+
+
+
 
 
     class ip4_udp_socket;
@@ -705,8 +714,12 @@ public:
       #ifdef _WIN32
       detail::wsa_intializer::singleton();
       sockaddr_in dest = to.native();
-      std::vector<char> data(begin_packet, end_packet);
-
+      std::vector< char > data;
+      for (auto it = begin_packet; it != end_packet; ++it)
+      {
+          data.emplace_back((char)*it);
+      }
+      
       auto result = sendto(socket.native(), (char const*)data.data(), data.size(), 0, (sockaddr*)&dest, sizeof(dest));
       if (result == SOCKET_ERROR)
       {
@@ -827,7 +840,7 @@ public:
       #ifdef _WIN32
       detail::wsa_intializer::singleton();
       #endif
-      std::array<std::byte, 256 * 256> buffer;
+      std::array<char, 256 * 256> buffer;
       sockaddr_in from;
       static_assert(sizeof(from) < INT_MAX);
 
@@ -848,7 +861,7 @@ public:
       auto buf_end = buffer.begin() + count;
       while (buf_it != buf_end)
       {
-          *it = *buf_it;
+          *it = std::byte( *buf_it);
           ++it;
           ++buf_it;
       }
@@ -897,6 +910,71 @@ public:
       #endif
 
   }
+
+  struct async_ip4_udp_send_request
+  {
+      ip4_udp_socket* socket;
+      void const* data;
+      std::size_t data_len;
+      std::function< void() > callback;
+
+  };
+
+  class async_service
+  {
+#ifdef _WIN32
+    private:
+      struct pending_operation
+      {
+          WSABUF buf;
+      };
+    public:
+
+      async_service() {}
+
+
+      void submit(async_ip4_udp_send_request const &req) 
+      { 
+          pending_operation * op = new pending_operation();
+         
+          op->buf.buf = const_cast<char*>((char const*) req.data);
+          op->buf.len = req.data_len;
+          //::WSASend(req.socket->native());
+      }
+
+
+#elif defined(__linux__)
+    private:
+      enum class op_type
+      {
+        read, write
+      };
+      struct pending_operation
+      {
+          int fd;
+          void* data;
+          std::size_t data_len;
+          op_type operation;
+      };
+
+      int m_epoll_instance;
+      std::set< pending_operation* > m_registered_pending_operations;
+
+
+    public:
+      async_service() 
+      {
+          m_epoll_instance = ::epoll_create(0);
+          if (m_epoll_instance == -1) throw std::runtime_error("Failed to create epoll instance");
+      }
+
+      void submit(async_ip4_udp_send_request const& req) 
+      {
+
+      }
+
+#endif
+  };
 }
 
 inline std::ostream& operator << (std::ostream& lhs, rpnx::ip4_address const& addr)

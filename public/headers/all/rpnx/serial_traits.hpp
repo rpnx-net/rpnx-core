@@ -329,6 +329,12 @@ namespace rpnx
 			*outIt++ = val;
 			return outIt;
 		}
+
+		static inline constexpr auto deseiralize(std::uint8_t & val, It in) -> It
+        {
+            val = *in++;
+            return in;
+		}
 	};
 
 
@@ -340,6 +346,12 @@ namespace rpnx
 			*outIt++ = val;
 			return outIt;
 		}
+
+		static inline constexpr auto deseiralize(std::int8_t& val, It in) -> It
+        {
+            val = *in++;
+            return in;
+        }
 	};
 
 	template <typename It>

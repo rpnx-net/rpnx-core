@@ -4,6 +4,8 @@
 #include <string>
 #include <rpnx/meta.hpp>
 
+#include <rpnx/thread_pool.hpp>
+
 struct foo;
 
 struct bar;

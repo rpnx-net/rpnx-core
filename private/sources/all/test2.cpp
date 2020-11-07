@@ -3,6 +3,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include "rpnx/thread_pool.hpp"
 
 int main()
 {

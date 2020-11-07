@@ -8,9 +8,11 @@ DerivePointerAlignment: false
 PointerAlignment: Left
 SpacesInAngles: true
 BreakBeforeBraces: Allman
-AllowShortIfStatementsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: false
 AlwaysBreakTemplateDeclarations: true
 UseTab: Never
 ColumnLimit: 200
 NamespaceIndentation: All
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: None
 ---
