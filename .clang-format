@@ -15,4 +15,5 @@ ColumnLimit: 200
 NamespaceIndentation: All
 AllowShortBlocksOnASingleLine: Empty
 AllowShortFunctionsOnASingleLine: None
+AllowShortLambdasOnASingleLine: None
 ---

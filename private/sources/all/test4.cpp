@@ -61,8 +61,20 @@ void test(std::string_view const& str, T const& val, std::vector< char > const& 
     
 }
 
+template <typename F, typename ...Ts>
+void foo(F f, std::tuple<Ts...> const &v_tuple) 
+{
+    std::apply([&](auto const&... ts) {
+        (f(ts), ...);
+    }, v_tuple);
+}
+
+
+
 int main()
 {
+    foo([](auto x) { std::cout << "param " << x << std::endl; }, std::make_tuple(1, 3, 4));
+
     {
         int8_t val = 4;
         test("int8_t", val, {4});

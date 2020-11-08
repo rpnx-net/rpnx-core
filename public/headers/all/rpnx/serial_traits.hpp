@@ -289,10 +289,10 @@ namespace rpnx
         static inline constexpr auto deserialize(std::uint64_t& val, ItGenerator in_generator)
         {
             auto it = in_generator(8);
-            val = *it++;
-            val |= (*it++ << 8);
-            val |= (*it++ << 16);
-            val |= (*it++ << 24);
+            val = std::uint64_t(*it++);
+            val |= (std::uint64_t(*it++) << 8);
+            val |= (std::uint64_t(*it++) << 16);
+            val |= (std::uint64_t(*it++) << 24);
             val |= (std::uint64_t(*it++) << 32);
             val |= (std::uint64_t(*it++) << 40);
             val |= (std::uint64_t(*it++) << 48);
@@ -577,23 +577,74 @@ namespace rpnx
             return in;
         }
     };
-    /*
-    template < typename It >
-    struct synchronous_iterator_serial_traits< char, It >
+
+    template < typename It, typename... Ts >
+    struct synchronous_iterator_serial_traits< std::tuple< Ts... >, It >
     {
-        static inline constexpr auto serialize(char val, It outIt) -> It
+        static inline constexpr auto serialize(std::tuple<Ts...> const& val, It outIt) -> It
         {
-            *outIt++ = val;
+            // clang-format off
+            std::apply([&](auto const&... ts)
+            {
+                ([&](auto const& subvalue) 
+                 {
+                     outIt = synchronous_iterator_serial_traits< decltype(value) >::serialize(subvalue, outIt);
+                 }(ts),
+                ...);
+            }, val);
+            // clang-format on
             return outIt;
         }
 
-        static inline constexpr auto deserialize(char& val, It inIt) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... > & val, It inIt) -> It
         {
-            val = *inIt++;
+            // clang-format off
+            std::apply([&](auto &... ts)
+            {
+                ([&](auto & subvalue) 
+                 {
+                     inIt = synchronous_iterator_serial_traits< decltype(value) >::deserialize(subvalue, inIt);
+                 }(ts),
+                ...);
+            }, val);
+            // clang-format on
             return inIt;
         }
     };
-    */
+
+    template < typename ItGenerator, typename... Ts >
+    struct synchronous_generator_serial_traits< std::tuple< Ts... >, ItGenerator >
+    {
+        static inline constexpr void serialize(std::tuple< Ts... > const& val, ItGenerator out_gen) 
+        {
+            // clang-format off
+            std::apply([&](auto const&... ts)
+            {
+                ([&](auto const& subvalue) 
+                 {
+                     synchronous_generator_serial_traits< decltype(value) >::serialize(subvalue, out_gen);
+                 }(ts),
+                ...);
+            }, val);
+            // clang-format on
+            return;
+        }
+
+        static inline constexpr auto deserialize(std::tuple< Ts... >& val, ItGenerator inIt) 
+        {
+            // clang-format off
+            std::apply([&](auto &... ts)
+            {
+                ([&](auto & subvalue) 
+                 {
+                     synchronous_generator_serial_traits< decltype(value) >::deserialize(subvalue, inIt);
+                 }(ts),
+                ...);
+            }, val);
+            // clang-format on
+            return;
+        }
+    };
 
     template <>
     struct serial_traits< uintany >
@@ -751,6 +802,18 @@ namespace rpnx
             return is_true_for_all< c_fixed_serial_size, Ts... >::value;
         }
         //  static_assert(false, "Unimplemented");
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            static_assert(has_fixed_serial_size(), "Type must have a fixed size to use fixed_serial_size()");
+
+            std::size_t val = 0;
+
+            
+        }
+
+        
+        
     };
 
     /*

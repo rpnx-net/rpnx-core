@@ -8,6 +8,9 @@
 
 namespace rpnx
 {
+    template <typename ... Ts>
+    struct typelist;
+
     template <typename T, typename Tuple>
     struct tuple_type_index;
 
@@ -41,6 +44,22 @@ namespace rpnx
     {
         static constexpr bool const value = TT< T >::value;
     };
+
+    template <typename I, template <typename > typename TT, typename ... Ts>
+    struct sum_for_all;
+
+    template < typename I, template < typename > typename TT, typename T, typename... Ts >
+    struct sum_for_all< I, TT, T, Ts... >
+    {
+        static constexpr I const value = TT<  T >::value + sum_for_all< I, TT, Ts... >::value;
+    };
+
+    template < typename I, template < typename > typename TT, typename T >
+    struct sum_for_all< I, TT, T >
+    {
+        static constexpr I const value = TT< T >::value ;
+    };
+
 
 }
 
