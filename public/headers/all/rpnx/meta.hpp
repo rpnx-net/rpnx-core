@@ -26,6 +26,22 @@ namespace rpnx
     static_assert(tuple_type_index<int, std::tuple<int, char>>::value == 0);
     static_assert(tuple_type_index<char, std::tuple<int, char>>::value == 1);
     static_assert(tuple_type_index<long long, std::tuple<int, char>>::value == -1);
+
+    template <template <typename> typename TT, typename ... Ts>
+    struct is_true_for_all;
+    
+    template < template < typename > typename TT, typename T, typename... Ts >
+    struct is_true_for_all< TT, T, Ts... >
+    {
+        static constexpr bool const value = TT< T >::value && is_true_for_all< TT, Ts... >::value;
+    };
+
+    template < template < typename > typename TT, typename T>
+    struct is_true_for_all< TT, T >
+    {
+        static constexpr bool const value = TT< T >::value;
+    };
+
 }
 
 #endif
