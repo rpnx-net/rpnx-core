@@ -141,7 +141,7 @@ namespace rpnx
         ~basic_derivator() { destroy(); }
 
         basic_derivator(basic_derivator<Allocator, Types...> const& other) 
-            : Allocator(other) 
+            : Allocator(other), m_value(nullptr), m_vtab(nullptr)
         {
             if (other.m_value)
             {

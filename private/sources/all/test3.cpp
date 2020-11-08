@@ -36,7 +36,7 @@ struct bar
         std::cout << "bar::bar(bar const&)" << std::endl;
     }
 
-    bar(bar && other) 
+    bar(bar && other) noexcept
     {
         value = std::move(other.value);
         std::cout << "bar::bar(bar &&)" << std::endl;
