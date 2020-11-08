@@ -57,9 +57,8 @@ namespace rpnx
     template < typename T, typename It >
     struct synchronous_iterator_serial_traits;
 
-    template <typename T>
-    struct c_fixed_serial_size;        
-    
+    template < typename T >
+    struct c_fixed_serial_size;
 
     template < typename T, typename It >
     auto quick_serialize(T const& val, It iterator) -> It;
@@ -416,7 +415,7 @@ namespace rpnx
             return outIt;
         }
 
-        static inline constexpr auto deserialize(char & val, It in) -> It
+        static inline constexpr auto deserialize(char& val, It in) -> It
         {
             val = *in++;
             return in;
@@ -744,17 +743,16 @@ namespace rpnx
         }
     };
 
-    template < typename ... Ts>
-    struct serial_traits< std::tuple<Ts...> >
+    template < typename... Ts >
+    struct serial_traits< std::tuple< Ts... > >
     {
         static inline constexpr bool has_fixed_serial_size()
         {
             return is_true_for_all< c_fixed_serial_size, Ts... >::value;
         }
-      //  static_assert(false, "Unimplemented");
+        //  static_assert(false, "Unimplemented");
     };
 
- 
     /*
     template < typename T, typename K, typename A >
     struct serial_traits< std::map< T, K, A > >
@@ -830,10 +828,9 @@ namespace rpnx
             return it;
         }
 
-        static inline constexpr auto deserialize(std::vector<T, Alloc> & value, It it) -> It
+        static inline constexpr auto deserialize(std::vector< T, Alloc >& value, It it) -> It
         {
             static_assert(false, "Unimplemented");
-        
         }
     };
 
@@ -967,7 +964,6 @@ namespace rpnx
 
     static_assert(c_fixed_serial_size< std::tuple< std::int32_t, std::int32_t > >::value == true);
     static_assert(c_fixed_serial_size< std::tuple< std::int32_t, std::string > >::value == false);
-
 
 } // namespace rpnx
 
