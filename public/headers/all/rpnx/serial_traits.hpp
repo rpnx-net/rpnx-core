@@ -293,10 +293,10 @@ namespace rpnx
             val |= (*it++ << 8);
             val |= (*it++ << 16);
             val |= (*it++ << 24);
-            val |= (*it++ << 32);
-            val |= (*it++ << 40);
-            val |= (*it++ << 48);
-            val |= (*it << 56);
+            val |= (std::uint64_t(*it++) << 32);
+            val |= (std::uint64_t(*it++) << 40);
+            val |= (std::uint64_t(*it++) << 48);
+            val |= (std::uint64_t(*it) << 56);
         }
     };
 
