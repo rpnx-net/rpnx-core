@@ -1243,53 +1243,6 @@ namespace rpnx
         }
     };
 
-    /*
-
-    template < typename It, typename... Ts >
-    struct synchronous_iterator_serial_traits< std::tuple< T, Ts... >, It >
-    {
-
-        static inline constexpr void serialize(std::tuple< Ts... > const& val, It out_it)
-        {
-            synchronous_iterator_tuple_serial_traits < decltype(ck),
-        }
-    };
-
-
-    template < typename ItGenerator, typename... Ts >
-    struct synchronous_generator_serial_traits< std::tuple< Ts... >, ItGenerator >
-    {
-        static inline constexpr void serialize(std::tuple< Ts... > const& val, ItGenerator out_gen)
-        {
-            // clang-format off
-            std::apply([&](auto const&... ts)
-            {
-                ([&](auto const& subvalue)
-                 {
-                     s
-                 }(ts),
-                ...);
-            }, val);
-            // clang-format on
-            return;
-        }
-
-        static inline constexpr auto deserialize(std::tuple< Ts... >& val, ItGenerator inIt)
-        {
-            // clang-format off
-            std::apply([&](auto &... ts)
-            {
-                ([&](auto & subvalue)
-                 {
-                     synchronous_generator_serial_traits< decltype(subvalue), ItGenerator >::deserialize(subvalue, inIt);
-                 }(ts),
-                ...);
-            }, val);
-            // clang-format on
-            return;
-        }
-    };
-    */
     template <>
     struct serial_traits< uintany >
     {
@@ -1445,7 +1398,6 @@ namespace rpnx
         {
             return is_true_for_all< c_fixed_serial_size, Ts... >::value;
         }
-        //  static_assert(false, "Unimplemented");
 
         static constexpr std::size_t fixed_serial_size()
         {
@@ -1453,6 +1405,22 @@ namespace rpnx
 
             std::size_t val = 0;
         }
+        /*
+        * 
+        * // Bug: this doesn't account for condensed bools.
+        * 
+        static constexpr std::size_t serial_size(std::tuple<Ts...> const & tuple)
+        {
+            
+            std::size_t total_size = 0;
+            std::apply(
+                [&](auto const& val) {
+                    total_size += serial_size(val);
+                },
+                tuple);
+            return total_size;
+        }
+        */
     };
 
     /*
