@@ -63,11 +63,32 @@ namespace rpnx
     template < typename T, typename ItGen, std::size_t I, typename... Ts >
     struct sychronous_generator_tuple_serial_traits;
 
+    template < typename T, std::size_t I, typename... Ts >
+    struct tuple_serial_traits;
+
     template < typename T >
     struct c_fixed_serial_size;
 
     template < typename T, typename It >
     auto quick_serialize(T const& val, It iterator) -> It;
+
+
+    template <>
+    struct serial_traits< bool >
+    {
+        static inline constexpr bool has_fixed_serial_size() noexcept
+        {
+            return true;
+        }
+        static inline constexpr std::size_t fixed_serial_size() noexcept
+        {
+            return 1;
+        }
+        static inline constexpr std::size_t serial_size(const bool&) noexcept
+        {
+            return 1;
+        }
+    };
 
     // The following 4 specializations are traits for unsigned integers
     // has_fixed_serial_size should return true, and returns the number of bytes in
@@ -88,6 +109,8 @@ namespace rpnx
             return 1;
         }
     };
+
+
 
     template <>
     struct serial_traits< std::uint16_t >
@@ -616,6 +639,341 @@ namespace rpnx
         }
     };
 
+    template< typename ... Ts, std::size_t I, typename T, typename ... Ts2>
+    struct tuple_serial_traits<std::tuple<Ts...>, I, T, Ts2...>
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            if (!serial_traits< T >::has_fixed_serial_size()) {
+                return false;
+            }                
+            else
+            {
+                return tuple_serial_traits< std::tuple< Ts... >, I + 1, Ts2... >::has_fixed_serial_size();
+            }
+        }
+
+        static constexpr std::size_t serial_size(std::tuple<Ts...> const & tuple)
+        {
+            return serial_traits< T >::serial_size(std::get< I >(tuple)) + tuple_serial_traits< std::tuple< Ts... >, I + 1, Ts2... >::serial_size(tuple);
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            static_assert(serial_traits< T >::has_fixed_serial_size());
+            return serial_traits< T >::fixed_serial_size() + tuple_serial_traits< std::tuple< Ts... >, I + 1, Ts2... >::fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size2(std::tuple< Ts... > const& tuple, std::size_t n = 0)
+        {
+            return tuple_serial_traits< std::tuple< Ts... >, I + 1, Ts2... >::serial_size2(tuple, n + serial_traits< T >::serial_size(std::get< I >(tuple)));
+        }
+    };
+
+    template < typename... Ts, std::size_t I, typename... Ts2 >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, bool, bool, bool, bool, Ts2... >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+                return tuple_serial_traits< std::tuple< Ts... >, I + 8, Ts2... >::has_fixed_serial_size();
+            
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 8, Ts2... >::serial_size(tuple);
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 8, Ts2... >::fixed_serial_size();
+        }
+    };
+
+    template < typename... Ts, std::size_t I >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, bool, bool, bool, bool >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return true;
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1;
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1;
+        }
+    };
+
+    
+    template < typename... Ts, std::size_t I, typename... Ts2 >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, bool, bool, bool, Ts2... >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+                return tuple_serial_traits< std::tuple< Ts... >, I + 7, Ts2... >::has_fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 7, Ts2... >::serial_size(tuple);
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 7, Ts2... >::fixed_serial_size();
+        }
+    };
+
+    template < typename... Ts, std::size_t I >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, bool, bool, bool >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return true
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1;
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1;
+        }
+    };
+
+    
+    template < typename... Ts, std::size_t I, typename... Ts2 >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, bool, bool, Ts2... >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return tuple_serial_traits< std::tuple< Ts... >, I + 6, Ts2... >::has_fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 6, Ts2... >::serial_size(tuple);
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 6, Ts2... >::fixed_serial_size();
+        }
+    };
+
+    template < typename... Ts, std::size_t I >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, bool, bool >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return true;
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1;
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1;
+        }
+    };
+
+
+    template < typename... Ts, std::size_t I, typename... Ts2 >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, bool,  Ts2... >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return tuple_serial_traits< std::tuple< Ts... >, I + 5, Ts2... >::has_fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 5, Ts2... >::serial_size(tuple);
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 5, Ts2... >::fixed_serial_size();
+        }
+    };
+
+    template < typename... Ts, std::size_t I >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, bool >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return true;
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1;
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1;
+        }
+    };
+
+    template < typename... Ts, std::size_t I, typename... Ts2 >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool, Ts2... >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return tuple_serial_traits< std::tuple< Ts... >, I + 4, Ts2... >::has_fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 4, Ts2... >::serial_size(tuple);
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 4, Ts2... >::fixed_serial_size();
+        }
+    };
+
+    template < typename... Ts, std::size_t I >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool, bool >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return true;
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1;
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1;
+        }
+    };
+
+    template < typename... Ts, std::size_t I, typename... Ts2 >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool,  Ts2... >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return tuple_serial_traits< std::tuple< Ts... >, I + 3, Ts2... >::has_fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 3, Ts2... >::serial_size(tuple);
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 3, Ts2... >::fixed_serial_size();
+        }
+    };
+
+    template < typename... Ts, std::size_t I >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, bool >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return true;
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1;
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1;
+        }
+    };
+
+    template < typename... Ts, std::size_t I, typename... Ts2 >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool, Ts2... >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return tuple_serial_traits< std::tuple< Ts... >, I + 2, Ts2... >::has_fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 2, Ts2... >::serial_size(tuple);
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1 + tuple_serial_traits< std::tuple< Ts... >, I + 2, Ts2... >::fixed_serial_size();
+        }
+    };
+
+    template < typename... Ts, std::size_t I >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, bool, bool >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return true;
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return 1;
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return 1;
+        }
+    };
+
+
+
+    template < typename... Ts, std::size_t I, typename T >
+    struct tuple_serial_traits< std::tuple< Ts... >, I, T >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            if (!serial_traits< T >::has_fixed_serial_size())
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
+        {
+            return serial_traits< T >::serial_size(std::get< I >(tuple));
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            static_assert(serial_traits< T >::has_fixed_serial_size());
+            return serial_traits< T >::fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size2(std::tuple< Ts... > const& tuple, std::size_t n = 0)
+        {
+            return n + serial_traits< T >::serial_size(std::get< I >(tuple));
+        }
+    };
+
     template < typename... Ts, typename It, std::size_t I, typename T, typename... Ts2 >
     struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, T, Ts2... >
     {
@@ -660,6 +1018,7 @@ namespace rpnx
             synchronous_generator_serial_traits< T, ItGen >::deserialize(std::get< I >(value), in);
             sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 1, Ts2... >::deserialize(value, in);
         }
+
     };
 
     // Bool Specializations (x8)
@@ -1394,36 +1753,51 @@ namespace rpnx
     template < typename... Ts >
     struct serial_traits< std::tuple< Ts... > >
     {
+        // TODO: Handle reference tuples
+
         static inline constexpr bool has_fixed_serial_size()
         {
-            return is_true_for_all< c_fixed_serial_size, Ts... >::value;
+            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::has_fixed_serial_size();
+            //return is_true_for_all< c_fixed_serial_size, Ts... >::value;
         }
 
         static constexpr std::size_t fixed_serial_size()
         {
             static_assert(has_fixed_serial_size(), "Type must have a fixed size to use fixed_serial_size()");
-
-            std::size_t val = 0;
+            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::fixed_serial_size();
         }
-        /*
-        * 
-        * // Bug: this doesn't account for condensed bools.
-        * 
+
         static constexpr std::size_t serial_size(std::tuple<Ts...> const & tuple)
         {
-            
-            std::size_t total_size = 0;
-            std::apply(
-                [&](auto const& val) {
-                    total_size += serial_size(val);
-                },
-                tuple);
-            return total_size;
+            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::serial_size(tuple);
         }
-        */
+
+        static constexpr std::size_t serial_size2(std::tuple< Ts... > const& tuple)
+        {   
+            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::serial_size2(tuple, 0);
+        }
     };
 
-    /*
+    template <typename First, typename Second>
+    struct serial_traits< std::pair<First, Second> >
+    {
+        static constexpr bool has_fixed_serial_size()
+        {
+            return serial_traits< std::tuple< First, Second > >::has_fixed_serial_size();
+        }
+
+        static constexpr std::size_t fixed_serial_size()
+        {
+            return serial_traits< std::tuple< First, Second > >::fixed_serial_size();
+        }
+
+        static constexpr std::size_t serial_size(std::pair<First, Second> const & value)
+        {
+            return serial_traits< std::tuple< First const &, Second const & > >::serial_size( std::tie(value.first, value.second));
+        }
+    };
+
+    
     template < typename T, typename K, typename A >
     struct serial_traits< std::map< T, K, A > >
     {
@@ -1431,9 +1805,10 @@ namespace rpnx
         {
             return false;
         }
+
         static inline constexpr std::size_t serial_size(std::map< T, K, A > const& value)
         {
-            if constexpr (serial_traits< typename std::map< T, K, A >::mapped_type >::has_fixed_serial_size() && serial_traits< typename std::map< T, K, A >::key_type >::has_fixed_serial_size())
+            if constexpr (serial_traits< typename std::map< T, K, A >::value_type >::has_fixed_serial_size())
             {
                 return serial_traits< uintany >::serial_size(value.size()) + serial_traits< typename std::vector< T, A >::value_type >::fixed_serial_size() * value.size();
             }
@@ -1449,7 +1824,7 @@ namespace rpnx
             }
         }
     };
-    */
+    
 
     template <>
     struct serial_traits< std::string >
@@ -1588,6 +1963,66 @@ namespace rpnx
         }
     };
 
+    template < typename K, typename V, typename Alloc, typename ItGenerator >
+    struct synchronous_generator_serial_traits< std::map< K, V, Alloc >, ItGenerator >
+    {
+        static inline constexpr auto serialize(std::map< K, V, Alloc > const& val, ItGenerator out_generator)
+        {
+            if constexpr (serial_traits< typename std::map< K, V, Alloc >::value_type >::has_fixed_serial_size())
+            {
+                auto it = out_generator(serial_traits< std::vector< T2, Alloc > >::serial_size(val));
+                it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
+                for (T2 const& x : val)
+                {
+                    it = synchronous_iterator_serial_traits< T2, decltype(it) >::serialize(x, it);
+                }
+            }
+            else
+            {
+                auto it = out_generator(serial_traits< uintany >::serial_size(val.size()));
+                it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
+                for (auto const& x : val)
+                {
+                    synchronous_generator_serial_traits< T2, ItGenerator >::serialize(x, out_generator);
+                }
+            }
+        }
+
+        static inline constexpr auto deserialize(std::vector< T2, Alloc >& val, ItGenerator in_generator)
+        {
+            if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size())
+            {
+                std::size_t sz;
+                synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
+                std::size_t total_size = sz * serial_traits< typename std::vector< T2, Alloc >::value_type >::fixed_serial_size();
+
+                auto it = in_generator(total_size);
+                for (std::size_t i = 0; i != sz; i++)
+                {
+                    T2 t;
+                    it = synchronous_iterator_serial_traits< T2, decltype(it) >::deserialize(t, it);
+                    val.emplace_back(std::move(t));
+                }
+
+                return;
+            }
+            else
+            {
+                std::size_t sz;
+                synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
+
+                for (std::size_t i = 0; i != sz; i++)
+                {
+                    T2 t;
+                    synchronous_generator_serial_traits< T2, ItGenerator >::deserialize(t, in_generator);
+                    val.emplace_back(std::move(t));
+                }
+
+                return;
+            }
+        }
+    };
+
     /*template <typename I>
     struct serial_traits<big_endian<I>>
             : serial_traits<I>
@@ -1634,6 +2069,8 @@ namespace rpnx
 
     static_assert(c_fixed_serial_size< std::tuple< std::int32_t, std::int32_t > >::value == true);
     static_assert(c_fixed_serial_size< std::tuple< std::int32_t, std::string > >::value == false);
+
+    static_assert(serial_traits< std::tuple< std::int32_t, std::int32_t > >::fixed_serial_size() == 8);
 
 } // namespace rpnx
 

@@ -3,6 +3,8 @@
 #include <iostream>
 #include <iomanip>
 #include <string_view>
+#include <map>
+#include <set>
 
 template < typename T >
 void test(std::string_view const& str, T const& val, std::vector< char > const& expected, T t2 = T{})
@@ -10,6 +12,8 @@ void test(std::string_view const& str, T const& val, std::vector< char > const& 
     std::vector< char > output;
     std::vector< char > output2;
     std::vector< char > output3;
+
+    std::size_t expected_size = rpnx::get_serial_size(val);
 
 
     auto print_output = [&] (std::vector<char> const & what){
@@ -35,6 +39,15 @@ void test(std::string_view const& str, T const& val, std::vector< char > const& 
     });
 
     rpnx::quick_iterator_serialize(val, std::back_inserter(output2));
+
+    if (expected.size() != expected_size) 
+    {
+        throw std::runtime_error((std::string(str) + ": Specified expected output size does not match get_serial_size").c_str());
+    }
+    else
+    {
+        std::cerr << str << ": Get serial size matches expected size." << std::endl;
+    }
 
     if (output == expected)
     {
@@ -113,47 +126,7 @@ int main()
     std::cout << typeid(T2).name() << std::endl;
     try
     {
-        {
-            std::tuple< bool, bool, bool, bool, bool, bool, bool, bool, int16_t > val{false, true, false, true, false, false, false, false, 5};
-            
-            test("std::tuple< bool, bool, bool, bool, bool, bool, bool, bool, int16_t >", val, {0b00001010, 5, 0});
-        }
-
-        {
-            std::tuple< bool, bool, bool, bool, bool, bool, bool, int16_t > val{false, true, false, true, false, false, false,  5};
-
-            test("std::tuple< bool, bool, bool, bool, bool, bool, bool, int16_t >", val, {0b00001010, 5, 0});
-        }
-
-        {
-            std::tuple< bool, bool, bool, bool, bool, bool,int16_t > val{false, true, false, true, false, false, 5};
-
-            test("std::tuple< bool, bool, bool, bool, bool, bool, int16_t >", val, {0b00001010, 5, 0});
-        }
-
-        {
-            std::tuple< bool, bool, bool, bool, bool, int16_t > val{false, true, false, true, false, 5};
-
-            test("std::tuple< bool, bool, bool, bool, bool,  int16_t >", val, {0b00001010, 5, 0});
-        }
-
-        {
-            std::tuple< bool, bool, bool, bool, int16_t > val{false, true, false, true, 5};
-
-            test("std::tuple< bool, bool, bool, bool, int16_t >", val, {0b00001010, 5, 0});
-        }
-
-        {
-            std::tuple< bool, bool, bool, int16_t > val{false, true, false, 5};
-
-            test("std::tuple< bool, bool, bool, int16_t >", val, {0b000000010, 5, 0});
-        }
-
-        {
-            std::tuple< bool, bool, int16_t > val{false, true, 5};
-
-            test("std::tuple< bool, bool,  int16_t >", val, {0b00000010, 5, 0});
-        }
+        
 
         {
             int8_t val = 4;
@@ -181,8 +154,8 @@ int main()
         }
 
         {
-            uint16_t val = 4;
-            test("uint16_t", val, {4, 0});
+            uint16_t val = 257;
+            test("uint16_t", val, {1, 1});
         }
 
         {
@@ -215,6 +188,53 @@ int main()
             test("std::string", val, {5, 'h', 'e', 'l', 'l', 'o'});
         }
 
+        {
+            std::tuple< bool, bool, bool, bool, bool, bool, bool, bool, int16_t > val{false, true, false, true, false, false, false, false, 5};
+            test("std::tuple< bool, bool, bool, bool, bool, bool, bool, bool, int16_t >", val, {0b00001010, 5, 0});
+        }
+
+        {
+            std::tuple< bool, bool, bool, bool, bool, bool, bool, int16_t > val{false, true, false, true, false, false, false, 5};
+
+            test("std::tuple< bool, bool, bool, bool, bool, bool, bool, int16_t >", val, {0b00001010, 5, 0});
+        }
+
+        {
+            std::tuple< bool, bool, bool, bool, bool, bool, int16_t > val{false, true, false, true, false, false, 5};
+
+            test("std::tuple< bool, bool, bool, bool, bool, bool, int16_t >", val, {0b00001010, 5, 0});
+        }
+
+        {
+            std::tuple< bool, bool, bool, bool, bool, int16_t > val{false, true, false, true, false, 5};
+
+            test("std::tuple< bool, bool, bool, bool, bool,  int16_t >", val, {0b00001010, 5, 0});
+        }
+
+        {
+            std::tuple< bool, bool, bool, bool, int16_t > val{false, true, false, true, 5};
+
+            test("std::tuple< bool, bool, bool, bool, int16_t >", val, {0b00001010, 5, 0});
+        }
+
+        {
+            std::tuple< bool, bool, bool, int16_t > val{false, true, false, 5};
+
+            test("std::tuple< bool, bool, bool, int16_t >", val, {0b000000010, 5, 0});
+        }
+
+        {
+            std::tuple< bool, bool, int16_t > val{false, true, 5};
+
+            test("std::tuple< bool, bool,  int16_t >", val, {0b00000010, 5, 0});
+        }
+
+        {
+            std::map< std::string, std::int16_t > val = {{"bar", 1}, {"foo", 2}};
+            test("std::map< std::string, std::int16_t >", val, {2, 3, 'b', 'a', 'r', 1, 0, 3, 'f', 'o', 'o', 2, 0});
+            
+
+        }
        
     }
     catch (std::exception const & er)
