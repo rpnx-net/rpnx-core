@@ -23,6 +23,7 @@ optimize much better than a strictly iterator based approach, while maintaining 
 #include <assert.h>
 #include <cinttypes>
 #include <cstddef>
+#include <iterator>
 #include <deque>
 #include <map>
 #include <set>
@@ -39,14 +40,35 @@ namespace rpnx
     // These are specialization placeholders
     // They are used to represent integers of any
     // size in a machine independent format.
+
+    // This is a "wire type", it only exists as a serial encoding,
+    // and objects of this type cannot be created.
     struct intany;
+
+    // This is a "wire type", it only exists as a serial encoding,
+    // and objects of this type cannot be created.
     struct uintany;
 
+
+    // This is a "wire type", it only exists as a serial encoding,
+    // and objects of this type cannot be created.
     template < typename I >
     struct big_endian;
 
+    // This is a "wire type", it only exists as a serial encoding,
+    // and objects of this type cannot be created.
     template < typename I >
     struct little_endian;
+
+    // This is a "wire type", it only exists as a serial encoding,
+    // and objects of this type cannot be created.
+    template < typename C >
+    struct with_32bit_size;
+
+    // This is a "wire type", it only exists as a serial encoding,
+    // and objects of this type cannot be created.
+    template < typename C >
+    struct with_64bit_size;
 
     template < typename T >
     struct serial_traits;
@@ -63,6 +85,39 @@ namespace rpnx
     template < typename T, typename ItGen, std::size_t I, typename... Ts >
     struct sychronous_generator_tuple_serial_traits;
 
+    /*
+    * This idea might be flawed... I don't this pattern will support mismatched wire and immediate types when that feature is added
+    * 
+    enum class add_method
+    {
+        do_push_back,
+        do_insert
+    };
+
+    template < typename C, typename Gen, bool do_clear, add_method Method >
+    struct sychronous_generator_stl_container_serial_traits
+    {
+        using value_type = typename C::value_type;
+        
+        static constexpr inline void serialize(C const & container, Gen g)
+        {
+            auto it = g(serial_traits< uintany >::serial_size(container.size()));
+            synchronous_iterator_serial_traits< uintany >::serialize(container.size(), it);
+            for (value_type const& x : container) 
+            {
+                synchronous_generator_serial_traits< value_type >::serialize(x, g);
+            }
+        }
+
+        static constexpr inline void deserialize(C & container, Gen g)
+        {
+            std::size_t size = 0;
+            sychronous_generator_serial_traits<
+        }
+
+    };
+    */
+
     template < typename T, std::size_t I, typename... Ts >
     struct tuple_serial_traits;
 
@@ -72,7 +127,7 @@ namespace rpnx
     template < typename T, typename It >
     auto quick_serialize(T const& val, It iterator) -> It;
 
-
+   
     template <>
     struct serial_traits< bool >
     {
@@ -734,7 +789,7 @@ namespace rpnx
     {
         static constexpr bool has_fixed_serial_size()
         {
-            return true
+            return true;
         }
 
         static constexpr std::size_t serial_size(std::tuple< Ts... > const& tuple)
@@ -985,7 +1040,7 @@ namespace rpnx
 
         static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
         {
-            outit = synchronous_iterator_serial_traits< T, It >::deserialize(std::get< I >(value), in);
+            in = synchronous_iterator_serial_traits< T, It >::deserialize(std::get< I >(value), in);
             return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 1, Ts2... >::deserialize(value, in);
         }
     };
@@ -1578,12 +1633,12 @@ namespace rpnx
     {
         static inline constexpr auto serialize(std::tuple< Ts... > const& val, It outIt) -> It
         {
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::serialize(val, outIt);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::serialize(val, outIt);
         }
 
         static inline constexpr auto deserialize(std::tuple< Ts... >& val, It inIt) -> It
         {
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::deserialize(val, inIt);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::deserialize(val, inIt);
         }
     };
 
@@ -1592,15 +1647,49 @@ namespace rpnx
     {
         static inline constexpr auto serialize(std::tuple< Ts... > const& val, ItGen out_gen) -> void
         {
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::serialize(val, out_gen);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::serialize(val, out_gen);
         }
 
         static inline constexpr auto deserialize(std::tuple< Ts... >& val, ItGen in) -> void
         {
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::deserialize(val, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::deserialize(val, in);
             return;
         }
     };
+
+    template < typename T1, typename T2, typename ItGen >
+    struct synchronous_generator_serial_traits< std::pair< T1, T2 >, ItGen >
+    {
+        static inline constexpr auto serialize(std::pair< T1, T2 > const& val, ItGen out_gen) -> void
+        {
+            sychronous_generator_tuple_serial_traits< std::tuple< T1 const &, T2 const & >, ItGen, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::serialize(std::tie(val.first, val.second), out_gen);
+        }
+
+        static inline constexpr auto deserialize(std::pair< T1, T2 >& val, ItGen in) -> void
+        {
+            // TODO: Allow tuple lvalues
+            auto lvalue = std::tie(val.first, val.second);
+            sychronous_generator_tuple_serial_traits< std::tuple< T1 &, T2 & >, ItGen, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::deserialize(lvalue, in);
+            return;
+        }
+    };
+
+    template < typename T1, typename T2, typename It >
+    struct synchronous_iterator_serial_traits< std::pair< T1, T2 >, It >
+    {
+        static inline constexpr auto serialize(std::pair< T1, T2 > const& val, It out) -> It
+        {
+            return sychronous_iterator_tuple_serial_traits< std::tuple< T1 const &, T2 const & >, It, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::serialize(std::tie(val.first, val.second), out);
+        }
+
+        static inline constexpr auto deserialize(std::pair< T1, T2 >& val, It in) -> It
+        {
+            // TODO: Make it accept rvalues for tuples of references
+            auto lvalue = std::tie(val.first, val.second);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< T1 &, T2 & >, It, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::deserialize(lvalue, in);
+        }
+    };
+
 
     template <>
     struct serial_traits< uintany >
@@ -1757,24 +1846,24 @@ namespace rpnx
 
         static inline constexpr bool has_fixed_serial_size()
         {
-            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::has_fixed_serial_size();
+            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::has_fixed_serial_size();
             //return is_true_for_all< c_fixed_serial_size, Ts... >::value;
         }
 
         static constexpr std::size_t fixed_serial_size()
         {
             static_assert(has_fixed_serial_size(), "Type must have a fixed size to use fixed_serial_size()");
-            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::fixed_serial_size();
+            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::fixed_serial_size();
         }
 
         static constexpr std::size_t serial_size(std::tuple<Ts...> const & tuple)
         {
-            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::serial_size(tuple);
+            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::serial_size(tuple);
         }
 
         static constexpr std::size_t serial_size2(std::tuple< Ts... > const& tuple)
         {   
-            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_reference_t< std::remove_all_extents_t< Ts > >... >::serial_size2(tuple, 0);
+            return tuple_serial_traits< std::tuple< Ts... >, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::serial_size2(tuple, 0);
         }
     };
 
@@ -1808,9 +1897,10 @@ namespace rpnx
 
         static inline constexpr std::size_t serial_size(std::map< T, K, A > const& value)
         {
-            if constexpr (serial_traits< typename std::map< T, K, A >::value_type >::has_fixed_serial_size())
+            using value_type = typename std::map< T, K, A >::value_type;
+            if constexpr (serial_traits< value_type >::has_fixed_serial_size())
             {
-                return serial_traits< uintany >::serial_size(value.size()) + serial_traits< typename std::vector< T, A >::value_type >::fixed_serial_size() * value.size();
+                return serial_traits< uintany >::serial_size(value.size()) + serial_traits< value_type >::fixed_serial_size() * value.size();
             }
             else
             {
@@ -1818,7 +1908,34 @@ namespace rpnx
                 result += serial_traits< uintany >::serial_size(value.size());
                 for (auto const& x : value)
                 {
-                    result += serial_traits< typename std::vector< T, A >::value_type >::serial_size(x);
+                    result += serial_traits< value_type >::serial_size(x);
+                }
+                return result;
+            }
+        }
+    };
+
+     template < typename T, typename K, typename A >
+    struct serial_traits< std::unordered_map< T, K, A > >
+    {
+        static inline constexpr bool has_fixed_serial_size()
+        {
+            return false;
+        }
+
+        static inline constexpr std::size_t serial_size(std::unordered_map< T, K, A > const& value)
+        {
+            using value_type = typename std::unordered_map< T, K, A >::value_type;
+            if constexpr (serial_traits< value_type >::has_fixed_serial_size())
+            {
+                return serial_traits< uintany >::serial_size(value.size()) + serial_traits< value_type >::fixed_serial_size() * value.size();
+            }
+            else
+            {
+                std::size_t result = serial_traits< uintany >::serial_size(value.size());
+                for (auto const& x : value)
+                {
+                    result += serial_traits< value_type >::serial_size(x);
                 }
                 return result;
             }
@@ -1851,7 +1968,7 @@ namespace rpnx
 
         static inline constexpr auto deserialize(std::string& val, ItGenerator in_generator)
         {
-            std::size_t count;
+            std::size_t count = 0;
             synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(count, in_generator);
             auto it = in_generator(count);
             val.resize(count);
@@ -1875,7 +1992,16 @@ namespace rpnx
 
         static inline constexpr auto deserialize(std::vector< T, Alloc >& value, It it) -> It
         {
-            static_assert(false, "Unimplemented");
+            // TODO: Optimize
+            value.clear();
+            std::size_t size = 0;
+            it = synchronous_iterator_serial_traits< uintany, decltype(it) >::deserialize(size, it);
+            for (std::size_t i = 0; i != size; i++)
+            {
+                T t;
+                it = synchronous_iterator_serial_traits< T, decltype(it) >::deserialize(t, it);
+                value.push_back(std::move(t));
+            }
         }
     };
 
@@ -1891,7 +2017,8 @@ namespace rpnx
 
         static inline constexpr auto deserialize(std::string& value, It it) -> It
         {
-            std::size_t size;
+            value.clear();
+            std::size_t size = 0;
             it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(size, it);
             // TODO: This is not efficient with all types of iterators.
             // May not even be legal in some cases.
@@ -1930,9 +2057,10 @@ namespace rpnx
 
         static inline constexpr auto deserialize(std::vector< T2, Alloc >& val, ItGenerator in_generator)
         {
+            val.clear();
             if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size())
             {
-                std::size_t sz;
+                std::size_t sz = 0;
                 synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
                 std::size_t total_size = sz * serial_traits< typename std::vector< T2, Alloc >::value_type >::fixed_serial_size();
 
@@ -1948,7 +2076,7 @@ namespace rpnx
             }
             else
             {
-                std::size_t sz;
+                std::size_t sz = 0;
                 synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
 
                 for (std::size_t i = 0; i != sz; i++)
@@ -1966,15 +2094,16 @@ namespace rpnx
     template < typename K, typename V, typename Alloc, typename ItGenerator >
     struct synchronous_generator_serial_traits< std::map< K, V, Alloc >, ItGenerator >
     {
+        using T = typename std::pair<K, V>;
         static inline constexpr auto serialize(std::map< K, V, Alloc > const& val, ItGenerator out_generator)
         {
             if constexpr (serial_traits< typename std::map< K, V, Alloc >::value_type >::has_fixed_serial_size())
             {
-                auto it = out_generator(serial_traits< std::vector< T2, Alloc > >::serial_size(val));
+                auto it = out_generator(serial_traits< typename std::map< K, V, Alloc >::value_type >::serial_size(val));
                 it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
-                for (T2 const& x : val)
+                for (auto const& x : val)
                 {
-                    it = synchronous_iterator_serial_traits< T2, decltype(it) >::serialize(x, it);
+                    it = synchronous_iterator_serial_traits< T, decltype(it) >::serialize(x, it);
                 }
             }
             else
@@ -1983,39 +2112,39 @@ namespace rpnx
                 it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
                 for (auto const& x : val)
                 {
-                    synchronous_generator_serial_traits< T2, ItGenerator >::serialize(x, out_generator);
+                    synchronous_generator_serial_traits< T, ItGenerator >::serialize(x, out_generator);
                 }
             }
         }
 
-        static inline constexpr auto deserialize(std::vector< T2, Alloc >& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::map< K, V, Alloc >& val, ItGenerator in_generator)
         {
-            if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size())
+            if constexpr (serial_traits< typename std::map< K, V, Alloc >::value_type >::has_fixed_serial_size())
             {
-                std::size_t sz;
+                std::size_t sz = 0;
                 synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
-                std::size_t total_size = sz * serial_traits< typename std::vector< T2, Alloc >::value_type >::fixed_serial_size();
+                std::size_t total_size = sz * serial_traits< T >::fixed_serial_size();
 
                 auto it = in_generator(total_size);
                 for (std::size_t i = 0; i != sz; i++)
                 {
-                    T2 t;
-                    it = synchronous_iterator_serial_traits< T2, decltype(it) >::deserialize(t, it);
-                    val.emplace_back(std::move(t));
+                    T t;
+                    it = synchronous_iterator_serial_traits< T, decltype(it) >::deserialize(t, it);
+                    val.insert(std::move(t));
                 }
 
                 return;
             }
             else
             {
-                std::size_t sz;
+                std::size_t sz = 0;
                 synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
 
                 for (std::size_t i = 0; i != sz; i++)
                 {
-                    T2 t;
-                    synchronous_generator_serial_traits< T2, ItGenerator >::deserialize(t, in_generator);
-                    val.emplace_back(std::move(t));
+                    std::pair<K, V> t;
+                    synchronous_generator_serial_traits< std::pair<K, V>, ItGenerator >::deserialize(t, in_generator);
+                    val.insert(std::move(t));
                 }
 
                 return;
@@ -2023,13 +2152,37 @@ namespace rpnx
         }
     };
 
-    /*template <typename I>
-    struct serial_traits<big_endian<I>>
-            : serial_traits<I>
+    template < typename K, typename V, typename Alloc, typename It >
+    struct synchronous_iterator_serial_traits< std::map< K, V, Alloc >, It >
     {
-            static_assert(std::is_integral<I>::value);
+        using T = typename std::pair<K, V>;
+        static inline constexpr auto serialize(std::map< K, V, Alloc > const& val, It out) -> It
+        {
+            out = synchronous_iterator_serial_traits< uintany, It >::serialize(val.size(), out);
+            for (auto const& x : val)
+            {
+                out = synchronous_iterator_serial_traits< T, It >::serialize(x, out);
+            }
+            return out;
+        }
+
+        static inline constexpr auto deserialize(std::map< K, V, Alloc >& val, It in) -> It
+        {
+            val.clear();
+            std::size_t sz = 0;
+            in = synchronous_iterator_serial_traits< uintany, It >::deserialize(sz, in);
+            std::size_t total_size = sz * serial_traits< T >::fixed_serial_size();
+            
+            for (std::size_t i = 0; i != sz; i++)
+            {
+                T t;
+                in = synchronous_iterator_serial_traits< T, It >::deserialize(t, in);
+                val.emplace_back(std::move(t));
+            }
+
+            return in;
+        }
     };
-    */
 
     template < typename T, typename ItF >
     inline void quick_generator_serialize(T const& t, ItF f)
