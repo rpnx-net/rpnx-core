@@ -94,39 +94,6 @@ namespace rpnx
     template < typename K, typename V, typename Iterator >
     struct sychronous_generator_map_serial_traits;
 
-    /*
-    * This idea might be flawed... I don't this pattern will support mismatched wire and immediate types when that feature is added
-    * 
-    enum class add_method
-    {
-        do_push_back,
-        do_insert
-    };
-
-    template < typename C, typename Gen, bool do_clear, add_method Method >
-    struct sychronous_generator_stl_container_serial_traits
-    {
-        using value_type = typename C::value_type;
-        
-        static constexpr inline void serialize(C const & container, Gen g)
-        {
-            auto it = g(serial_traits< uintany >::serial_size(container.size()));
-            synchronous_iterator_serial_traits< uintany >::serialize(container.size(), it);
-            for (value_type const& x : container) 
-            {
-                synchronous_generator_serial_traits< value_type >::serialize(x, g);
-            }
-        }
-
-        static constexpr inline void deserialize(C & container, Gen g)
-        {
-            std::size_t size = 0;
-            sychronous_generator_serial_traits<
-        }
-
-    };
-    */
-
     template < typename T, std::size_t I, typename... Ts >
     struct tuple_serial_traits;
 
