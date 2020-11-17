@@ -9,4 +9,5 @@
 .vscode
 .thumbsdb
 CMakeLists.txt.user
+CMakeSettings.json
 .vs
