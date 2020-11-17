@@ -10,7 +10,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 /*
-This is currently a work in progress. It's a version 2 of the original version I published as a separate library.
+This is currently a work in progress. Iterator's a version 2 of the original version I published as a separate library.
 This version should perform better due to the inclusion of generator interfaces, which should, at least in theory,
 optimize much better than a strictly iterator based approach, while maintaining safety.
 
@@ -73,17 +73,26 @@ namespace rpnx
     template < typename T >
     struct serial_traits;
 
-    template < typename T, typename ItGenerator >
+    template <typename K, typename V>
+    struct map_serial_traits;
+
+    template < typename T, typename Generator >
     struct synchronous_generator_serial_traits;
 
-    template < typename T, typename It >
+    template < typename T, typename Iterator >
     struct synchronous_iterator_serial_traits;
 
-    template < typename T, typename It, std::size_t I, typename... Ts >
+    template < typename T, typename Iterator, std::size_t I, typename... Ts >
     struct sychronous_iterator_tuple_serial_traits;
 
-    template < typename T, typename ItGen, std::size_t I, typename... Ts >
+    template < typename K, typename V, typename Iterator >
+    struct sychronous_iterator_map_serial_traits;
+
+    template < typename T, typename Generator, std::size_t I, typename... Ts >
     struct sychronous_generator_tuple_serial_traits;
+
+    template < typename K, typename V, typename Iterator >
+    struct sychronous_generator_map_serial_traits;
 
     /*
     * This idea might be flawed... I don't this pattern will support mismatched wire and immediate types when that feature is added
@@ -124,8 +133,8 @@ namespace rpnx
     template < typename T >
     struct c_fixed_serial_size;
 
-    template < typename T, typename It >
-    auto quick_serialize(T const& val, It iterator) -> It;
+    template < typename T, typename Iterator >
+    auto quick_serialize(T const& val, Iterator iterator) -> Iterator;
 
    
     template <>
@@ -294,46 +303,46 @@ namespace rpnx
     // The following 4 specializations are for serial synchronous generator interfaces for the
     // unsigned integers
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::uint8_t, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::uint8_t, Generator >
     {
-        static inline constexpr auto serialize(std::uint8_t val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::uint8_t val, Generator g)
         {
-            auto it = out_generator(1);
+            auto it = g(1);
             *it++ = val;
         }
 
-        static inline constexpr auto deserialize(std::uint8_t& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::uint8_t& val, Generator g)
         {
-            auto it = in_generator(1);
+            auto it = g(1);
             val = *it++;
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::uint16_t, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::uint16_t, Generator >
     {
-        static inline constexpr auto serialize(std::uint16_t val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::uint16_t val, Generator g)
         {
-            auto it = out_generator(2);
+            auto it = g(2);
             *it++ = val & 0xFF;
             *it = (val >> 8) & 0xFF;
         }
 
-        static inline constexpr auto deserialize(std::uint16_t& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::uint16_t& val, Generator g)
         {
-            auto it = in_generator(2);
+            auto it = g(2);
             val = *it++;
             val |= (*it << 8);
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::uint32_t, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::uint32_t, Generator >
     {
-        static inline constexpr auto serialize(std::uint32_t val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::uint32_t val, Generator g)
         {
-            auto it = out_generator(4);
+            auto it = g(4);
             *it++ = val & 0xFF;
             *it++ = (val >> 8) & 0xFF;
             *it++ = (val >> 16) & 0xFF;
@@ -342,9 +351,9 @@ namespace rpnx
             // synchronous_iterator_serialize_traits<std::uint32_t, std::remove_reference_t<decltype(*it)>>(it, val);
         }
 
-        static inline constexpr auto deserialize(std::uint32_t& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::uint32_t& val, Generator g)
         {
-            auto it = in_generator(4);
+            auto it = g(4);
             val = *it++;
             val |= (*it++ << 8);
             val |= (*it++ << 16);
@@ -352,12 +361,12 @@ namespace rpnx
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::uint64_t, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::uint64_t, Generator >
     {
-        static inline constexpr auto serialize(std::uint64_t val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::uint64_t val, Generator g)
         {
-            auto it = out_generator(8);
+            auto it = g(8);
             *it++ = val & 0xFF;
             *it++ = (val >> 8) & 0xFF;
             *it++ = (val >> 16) & 0xFF;
@@ -370,9 +379,9 @@ namespace rpnx
             // synchronous_iterator_serialize_traits<std::uint32_t, std::remove_reference_t<decltype(*it)>>(it, val);
         }
 
-        static inline constexpr auto deserialize(std::uint64_t& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::uint64_t& val, Generator g)
         {
-            auto it = in_generator(8);
+            auto it = g(8);
             val = std::uint64_t(*it++);
             val |= (std::uint64_t(*it++) << 8);
             val |= (std::uint64_t(*it++) << 16);
@@ -384,62 +393,62 @@ namespace rpnx
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< bool, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< bool, Generator >
     {
-        static inline constexpr auto serialize(bool val, ItGenerator out_generator)
+        static inline constexpr auto serialize(bool val, Generator g)
         {
-            auto it = out_generator(1);
+            auto it = g(1);
             *it++ = val == true ? 1 : 0;
         }
 
-        static inline constexpr auto deserialize(bool& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(bool& val, Generator g)
         {
-            auto it = in_generator(1);
+            auto it = g(1);
             val = (*it++ == 0 ? false : true);
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::int8_t, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::int8_t, Generator >
     {
-        static inline constexpr auto serialize(std::int8_t val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::int8_t val, Generator g)
         {
-            auto it = out_generator(1);
+            auto it = g(1);
             *it++ = val;
         }
 
-        static inline constexpr auto deserialize(std::int8_t& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::int8_t& val, Generator g)
         {
-            auto it = in_generator(1);
+            auto it = g(1);
             val = *it++;
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::int16_t, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::int16_t, Generator >
     {
-        static inline constexpr auto serialize(std::int16_t val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::int16_t val, Generator g)
         {
-            auto it = out_generator(2);
+            auto it = g(2);
             *it++ = val & 0xFF;
             *it = (val >> 8) & 0xFF;
         }
 
-        static inline constexpr auto deserialize(std::int16_t& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::int16_t& val, Generator g)
         {
-            auto it = in_generator(2);
+            auto it = g(2);
             val = *it++;
             val |= (*it << 8);
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::int32_t, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::int32_t, Generator >
     {
-        static inline constexpr auto serialize(std::int32_t val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::int32_t val, Generator g)
         {
-            auto it = out_generator(4);
+            auto it = g(4);
             *it++ = val & 0xFF;
             *it++ = (val >> 8) & 0xFF;
             *it++ = (val >> 16) & 0xFF;
@@ -448,9 +457,9 @@ namespace rpnx
             // synchronous_iterator_serialize_traits<std::int32_t, std::remove_reference_t<decltype(*it)>>(it, val);
         }
 
-        static inline constexpr auto deserialize(std::int32_t& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::int32_t& val, Generator g)
         {
-            auto it = in_generator(4);
+            auto it = g(4);
             val = *it++;
             val |= (*it++ << 8);
             val |= (*it++ << 16);
@@ -458,12 +467,12 @@ namespace rpnx
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::int64_t, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::int64_t, Generator >
     {
-        static inline constexpr auto serialize(std::int64_t val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::int64_t val, Generator g)
         {
-            auto it = out_generator(8);
+            auto it = g(8);
             *it++ = val & 0xFF;
             *it++ = (val >> 8) & 0xFF;
             *it++ = (val >> 16) & 0xFF;
@@ -476,9 +485,9 @@ namespace rpnx
             // synchronous_iterator_serialize_traits<std::int32_t, std::remove_reference_t<decltype(*it)>>(it, val);
         }
 
-        static inline constexpr auto deserialize(std::int64_t& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::int64_t& val, Generator g)
         {
-            auto it = in_generator(8);
+            auto it = g(8);
             val = *it++;
             val |= (*it++ << 8);
             val |= (*it++ << 16);
@@ -490,83 +499,65 @@ namespace rpnx
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::uint8_t, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::uint8_t, Iterator >
     {
-        static inline constexpr auto serialize(std::uint8_t val, It outIt) -> It
+        static inline constexpr auto serialize(std::uint8_t val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val;
-            return outIt;
+            *outIterator++ = val;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(std::uint8_t& val, It in) -> It
+        static inline constexpr auto deserialize(std::uint8_t& val, Iterator in) -> Iterator
         {
             val = *in++;
             return in;
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< bool, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< bool, Iterator >
     {
-        static inline constexpr auto serialize(bool val, It outIt) -> It
+        static inline constexpr auto serialize(bool val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val ? 1 : 0;
-            return outIt;
+            *outIterator++ = val ? 1 : 0;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(bool& val, It in) -> It
+        static inline constexpr auto deserialize(bool& val, Iterator in) -> Iterator
         {
             val = (*in++ == 0 ? false : true);
             return in;
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< char, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< char, Iterator >
     {
-        static inline constexpr auto serialize(char val, It outIt) -> It
+        static inline constexpr auto serialize(char val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val;
-            return outIt;
+            *outIterator++ = val;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(char& val, It in) -> It
+        static inline constexpr auto deserialize(char& val, Iterator in) -> Iterator
         {
             val = *in++;
             return in;
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::uint16_t, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::uint16_t, Iterator >
     {
-        static inline constexpr auto serialize(std::uint16_t val, It outIt) -> It
+        static inline constexpr auto serialize(std::uint16_t val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val;
-            *outIt++ = val >> 8;
-            return outIt;
+            *outIterator++ = val;
+            *outIterator++ = val >> 8;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(std::uint16_t& val, It in) -> It
-        {
-            val = *in++;
-            val |= (*in++ << 8);
-            return in;
-        }
-    };
-
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::int16_t, It >
-    {
-        static inline constexpr auto serialize(std::int16_t val, It outIt) -> It
-        {
-            *outIt++ = val;
-            *outIt++ = val >> 8;
-            return outIt;
-        }
-
-        static inline constexpr auto deserialize(std::int16_t& val, It in) -> It
+        static inline constexpr auto deserialize(std::uint16_t& val, Iterator in) -> Iterator
         {
             val = *in++;
             val |= (*in++ << 8);
@@ -574,41 +565,37 @@ namespace rpnx
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::int32_t, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::int16_t, Iterator >
     {
-        static inline constexpr auto serialize(std::int32_t val, It outIt) -> It
+        static inline constexpr auto serialize(std::int16_t val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val;
-            *outIt++ = val >> 8;
-            *outIt++ = val >> 16;
-            *outIt++ = val >> 24;
-            return outIt;
+            *outIterator++ = val;
+            *outIterator++ = val >> 8;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(std::int32_t& val, It in) -> It
+        static inline constexpr auto deserialize(std::int16_t& val, Iterator in) -> Iterator
         {
             val = *in++;
             val |= (*in++ << 8);
-            val |= (*in++ << 16);
-            val |= (*in++ << 24);
             return in;
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::uint32_t, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::int32_t, Iterator >
     {
-        static inline constexpr auto serialize(std::uint32_t val, It outIt) -> It
+        static inline constexpr auto serialize(std::int32_t val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val;
-            *outIt++ = val >> 8;
-            *outIt++ = val >> 16;
-            *outIt++ = val >> 24;
-            return outIt;
+            *outIterator++ = val;
+            *outIterator++ = val >> 8;
+            *outIterator++ = val >> 16;
+            *outIterator++ = val >> 24;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(std::uint32_t& val, It in) -> It
+        static inline constexpr auto deserialize(std::int32_t& val, Iterator in) -> Iterator
         {
             val = *in++;
             val |= (*in++ << 8);
@@ -618,53 +605,45 @@ namespace rpnx
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::uint64_t, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::uint32_t, Iterator >
     {
-        static inline constexpr auto serialize(std::uint64_t val, It outIt) -> It
+        static inline constexpr auto serialize(std::uint32_t val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val;
-            *outIt++ = val >> 8;
-            *outIt++ = val >> 16;
-            *outIt++ = val >> 24;
-            *outIt++ = val >> 32;
-            *outIt++ = val >> 40;
-            *outIt++ = val >> 48;
-            *outIt++ = val >> 56;
-            return outIt;
+            *outIterator++ = val;
+            *outIterator++ = val >> 8;
+            *outIterator++ = val >> 16;
+            *outIterator++ = val >> 24;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(std::uint64_t& val, It in) -> It
+        static inline constexpr auto deserialize(std::uint32_t& val, Iterator in) -> Iterator
         {
             val = *in++;
             val |= (*in++ << 8);
             val |= (*in++ << 16);
             val |= (*in++ << 24);
-            val |= (std::uint64_t(*in++) << 32);
-            val |= (std::uint64_t(*in++) << 40);
-            val |= (std::uint64_t(*in++) << 48);
-            val |= (std::uint64_t(*in++) << 56);
             return in;
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::int64_t, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::uint64_t, Iterator >
     {
-        static inline constexpr auto serialize(std::int64_t val, It outIt) -> It
+        static inline constexpr auto serialize(std::uint64_t val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val;
-            *outIt++ = val >> 8;
-            *outIt++ = val >> 16;
-            *outIt++ = val >> 24;
-            *outIt++ = val >> 32;
-            *outIt++ = val >> 40;
-            *outIt++ = val >> 48;
-            *outIt++ = val >> 56;
-            return outIt;
+            *outIterator++ = val;
+            *outIterator++ = val >> 8;
+            *outIterator++ = val >> 16;
+            *outIterator++ = val >> 24;
+            *outIterator++ = val >> 32;
+            *outIterator++ = val >> 40;
+            *outIterator++ = val >> 48;
+            *outIterator++ = val >> 56;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(std::int64_t& val, It in) -> It
+        static inline constexpr auto deserialize(std::uint64_t& val, Iterator in) -> Iterator
         {
             val = *in++;
             val |= (*in++ << 8);
@@ -678,16 +657,46 @@ namespace rpnx
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::int8_t, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::int64_t, Iterator >
     {
-        static inline constexpr auto serialize(std::int8_t val, It outIt) -> It
+        static inline constexpr auto serialize(std::int64_t val, Iterator outIterator) -> Iterator
         {
-            *outIt++ = val;
-            return outIt;
+            *outIterator++ = val;
+            *outIterator++ = val >> 8;
+            *outIterator++ = val >> 16;
+            *outIterator++ = val >> 24;
+            *outIterator++ = val >> 32;
+            *outIterator++ = val >> 40;
+            *outIterator++ = val >> 48;
+            *outIterator++ = val >> 56;
+            return outIterator;
         }
 
-        static inline constexpr auto deserialize(std::int8_t& val, It in) -> It
+        static inline constexpr auto deserialize(std::int64_t& val, Iterator in) -> Iterator
+        {
+            val = *in++;
+            val |= (*in++ << 8);
+            val |= (*in++ << 16);
+            val |= (*in++ << 24);
+            val |= (std::uint64_t(*in++) << 32);
+            val |= (std::uint64_t(*in++) << 40);
+            val |= (std::uint64_t(*in++) << 48);
+            val |= (std::uint64_t(*in++) << 56);
+            return in;
+        }
+    };
+
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::int8_t, Iterator >
+    {
+        static inline constexpr auto serialize(std::int8_t val, Iterator outIterator) -> Iterator
+        {
+            *outIterator++ = val;
+            return outIterator;
+        }
+
+        static inline constexpr auto deserialize(std::int8_t& val, Iterator in) -> Iterator
         {
             val = *in++;
             return in;
@@ -1029,664 +1038,664 @@ namespace rpnx
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I, typename T, typename... Ts2 >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, T, Ts2... >
+    template < typename... Ts, typename Iterator, std::size_t I, typename T, typename... Ts2 >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, T, Ts2... >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
-            outit = synchronous_iterator_serial_traits< T, It >::serialize(std::get< I >(value), outit);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 1, Ts2... >::serialize(value, outit);
+            outit = synchronous_iterator_serial_traits< T, Iterator >::serialize(std::get< I >(value), outit);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 1, Ts2... >::serialize(value, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
-            in = synchronous_iterator_serial_traits< T, It >::deserialize(std::get< I >(value), in);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 1, Ts2... >::deserialize(value, in);
+            in = synchronous_iterator_serial_traits< T, Iterator >::deserialize(std::get< I >(value), in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 1, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I, typename T >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, T >
+    template < typename... Ts, typename Iterator, std::size_t I, typename T >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, T >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
-            return synchronous_iterator_serial_traits< T, It >::serialize(std::get< I >(value), outit);
+            return synchronous_iterator_serial_traits< T, Iterator >::serialize(std::get< I >(value), outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
-            return synchronous_iterator_serial_traits< T, It >::deserialize(std::get< I >(value), in);
+            return synchronous_iterator_serial_traits< T, Iterator >::deserialize(std::get< I >(value), in);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename T, typename... Ts2 >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, T, Ts2... >
+    template < typename... Ts, typename Generator, std::size_t I, typename T, typename... Ts2 >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, T, Ts2... >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
-            synchronous_generator_serial_traits< T, ItGen >::serialize(std::get< I >(value), out);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 1, Ts2... >::serialize(value, out);
+            synchronous_generator_serial_traits< T, Generator >::serialize(std::get< I >(value), out);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 1, Ts2... >::serialize(value, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
-            synchronous_generator_serial_traits< T, ItGen >::deserialize(std::get< I >(value), in);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 1, Ts2... >::deserialize(value, in);
+            synchronous_generator_serial_traits< T, Generator >::deserialize(std::get< I >(value), in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 1, Ts2... >::deserialize(value, in);
         }
 
     };
 
     // Bool Specializations (x8)
 
-    template < typename... Ts, typename It, std::size_t I, typename... Ts2 >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Iterator, std::size_t I, typename... Ts2 >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 8, Ts... >(value);
-            outit = synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 8, Ts2... >::serialize(value, outit);
+            outit = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 8, Ts2... >::serialize(value, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 8, Ts... >(value, bool_val);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 8, Ts2... >::deserialize(value, in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 8, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename... Ts2 >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Generator, std::size_t I, typename... Ts2 >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 8, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 8, Ts2... >::serialize(value, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 8, Ts2... >::serialize(value, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 8, Ts... >(value, bool_val);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 8, Ts2... >::deserialize(value, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 8, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, bool, bool, bool, bool >
+    template < typename... Ts, typename Iterator, std::size_t I >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, bool, bool, bool, bool >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 8, Ts... >(value);
-            return synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
+            return synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 8, Ts... >(value, bool_val);
             return in;
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, bool, bool, bool, bool >
+    template < typename... Ts, typename Generator, std::size_t I >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, bool, bool, bool, bool >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 8, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 8, Ts... >(value, bool_val);
         }
     };
     // Bool Specializations (x7)
 
-    template < typename... Ts, typename It, std::size_t I, typename... Ts2 >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Iterator, std::size_t I, typename... Ts2 >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 7, Ts... >(value);
-            outit = synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 7, Ts2... >::serialize(value, outit);
+            outit = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 7, Ts2... >::serialize(value, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 7, Ts... >(value, bool_val);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 7, Ts2... >::deserialize(value, in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 7, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename... Ts2 >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Generator, std::size_t I, typename... Ts2 >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 7, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 7, Ts2... >::serialize(value, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 7, Ts2... >::serialize(value, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 7, Ts... >(value, bool_val);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 7, Ts2... >::deserialize(value, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 7, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, bool, bool, bool >
+    template < typename... Ts, typename Iterator, std::size_t I >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, bool, bool, bool >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 7, Ts... >(value);
-            return synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
+            return synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 7, Ts... >(value, bool_val);
             return in;
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, bool, bool, bool >
+    template < typename... Ts, typename Generator, std::size_t I >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, bool, bool, bool >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 7, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 7, Ts... >(value, bool_val);
         }
     };
 
     // Bool Specializations (x6)
 
-    template < typename... Ts, typename It, std::size_t I, typename... Ts2 >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Iterator, std::size_t I, typename... Ts2 >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 6, Ts... >(value);
-            outit = synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 6, Ts2... >::serialize(value, outit);
+            outit = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 6, Ts2... >::serialize(value, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 6, Ts... >(value, bool_val);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 6, Ts2... >::deserialize(value, in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 6, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename... Ts2 >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Generator, std::size_t I, typename... Ts2 >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 6, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 6, Ts2... >::serialize(value, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 6, Ts2... >::serialize(value, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 6, Ts... >(value, bool_val);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 6, Ts2... >::deserialize(value, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 6, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, bool, bool >
+    template < typename... Ts, typename Iterator, std::size_t I >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, bool, bool >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 6, Ts... >(value);
-            return synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
+            return synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 6, Ts... >(value, bool_val);
             return in;
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, bool, bool >
+    template < typename... Ts, typename Generator, std::size_t I >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, bool, bool >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 6, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 6, Ts... >(value, bool_val);
         }
     };
 
     // Bool Specializations (x5)
 
-    template < typename... Ts, typename It, std::size_t I, typename... Ts2 >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Iterator, std::size_t I, typename... Ts2 >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 5, Ts... >(value);
-            outit = synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 5, Ts2... >::serialize(value, outit);
+            outit = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 5, Ts2... >::serialize(value, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 5, Ts... >(value, bool_val);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 5, Ts2... >::deserialize(value, in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 5, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename... Ts2 >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Generator, std::size_t I, typename... Ts2 >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 5, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 5, Ts2... >::serialize(value, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 5, Ts2... >::serialize(value, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 5, Ts... >(value, bool_val);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 5, Ts2... >::deserialize(value, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 5, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, bool >
+    template < typename... Ts, typename Iterator, std::size_t I >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, bool >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 5, Ts... >(value);
-            return synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
+            return synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 5, Ts... >(value, bool_val);
             return in;
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, bool >
+    template < typename... Ts, typename Generator, std::size_t I >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, bool >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 5, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 5, Ts... >(value, bool_val);
         }
     };
 
     // Bool Specializations (x4)
 
-    template < typename... Ts, typename It, std::size_t I, typename... Ts2 >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Iterator, std::size_t I, typename... Ts2 >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 4, Ts... >(value);
-            outit = synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 4, Ts2... >::serialize(value, outit);
+            outit = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 4, Ts2... >::serialize(value, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 4, Ts... >(value, bool_val);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 4, Ts2... >::deserialize(value, in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 4, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename... Ts2 >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Generator, std::size_t I, typename... Ts2 >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool, Ts2... >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 4, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 4, Ts2... >::serialize(value, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 4, Ts2... >::serialize(value, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 4, Ts... >(value, bool_val);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 4, Ts2... >::deserialize(value, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 4, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, bool >
+    template < typename... Ts, typename Iterator, std::size_t I >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, bool >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 4, Ts... >(value);
-            return synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
+            return synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 4, Ts... >(value, bool_val);
             return in;
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, bool >
+    template < typename... Ts, typename Generator, std::size_t I >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, bool >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 4, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 4, Ts... >(value, bool_val);
         }
     };
 
     // Bool Specializations (x3)
 
-    template < typename... Ts, typename It, std::size_t I, typename... Ts2 >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Iterator, std::size_t I, typename... Ts2 >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool, Ts2... >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 3, Ts... >(value);
-            outit = synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 3, Ts2... >::serialize(value, outit);
+            outit = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 3, Ts2... >::serialize(value, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 3, Ts... >(value, bool_val);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 3, Ts2... >::deserialize(value, in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 3, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename... Ts2 >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool, Ts2... >
+    template < typename... Ts, typename Generator, std::size_t I, typename... Ts2 >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool, Ts2... >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 3, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 3, Ts2... >::serialize(value, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 3, Ts2... >::serialize(value, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 3, Ts... >(value, bool_val);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 3, Ts2... >::deserialize(value, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 3, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, bool >
+    template < typename... Ts, typename Iterator, std::size_t I >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, bool >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 3, Ts... >(value);
-            return synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
+            return synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 3, Ts... >(value, bool_val);
             return in;
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, bool >
+    template < typename... Ts, typename Generator, std::size_t I >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, bool >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 3, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 3, Ts... >(value, bool_val);
         }
     };
 
     // Bool Specializations (x2)
 
-    template < typename... Ts, typename It, std::size_t I, typename... Ts2 >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool, Ts2... >
+    template < typename... Ts, typename Iterator, std::size_t I, typename... Ts2 >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool, Ts2... >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 2, Ts... >(value);
-            outit = synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 2, Ts2... >::serialize(value, outit);
+            outit = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 2, Ts2... >::serialize(value, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 2, Ts... >(value, bool_val);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I + 2, Ts2... >::deserialize(value, in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I + 2, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename... Ts2 >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool, Ts2... >
+    template < typename... Ts, typename Generator, std::size_t I, typename... Ts2 >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool, Ts2... >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 2, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 2, Ts2... >::serialize(value, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 2, Ts2... >::serialize(value, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 2, Ts... >(value, bool_val);
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I + 2, Ts2... >::deserialize(value, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I + 2, Ts2... >::deserialize(value, in);
         }
     };
 
-    template < typename... Ts, typename It, std::size_t I >
-    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, I, bool, bool >
+    template < typename... Ts, typename Iterator, std::size_t I >
+    struct sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, I, bool, bool >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& value, It outit) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& value, Iterator outit) -> Iterator
         {
             std::uint8_t bool_val = tuple_get_bool_sequence< I, 2, Ts... >(value);
-            return synchronous_iterator_serial_traits< std::uint8_t, It >::serialize(bool_val, outit);
+            return synchronous_iterator_serial_traits< std::uint8_t, Iterator >::serialize(bool_val, outit);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& value, It in) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& value, Iterator in) -> Iterator
         {
             std::uint8_t bool_val = 0;
-            in = synchronous_iterator_serial_traits< std::uint8_t, It >::deserialize(bool_val, in);
+            in = synchronous_iterator_serial_traits< std::uint8_t, Iterator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 2, Ts... >(value, bool_val);
             return in;
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, bool, bool >
+    template < typename... Ts, typename Generator, std::size_t I >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, bool, bool >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
             std::uint8_t bool_val = 0;
             bool_val = tuple_get_bool_sequence< I, 2, Ts... >(value);
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::serialize(bool_val, out);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::serialize(bool_val, out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen in)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator in)
         {
             std::uint8_t bool_val = 0;
-            synchronous_generator_serial_traits< std::uint8_t, ItGen >::deserialize(bool_val, in);
+            synchronous_generator_serial_traits< std::uint8_t, Generator >::deserialize(bool_val, in);
             tuple_set_bool_sequence< I, 2, Ts... >(value, bool_val);
         }
     };
 
-    template < typename... Ts, typename ItGen, std::size_t I, typename T >
-    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, I, T >
+    template < typename... Ts, typename Generator, std::size_t I, typename T >
+    struct sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, I, T >
     {
-        static inline constexpr void serialize(std::tuple< Ts... > const& value, ItGen out)
+        static inline constexpr void serialize(std::tuple< Ts... > const& value, Generator out)
         {
-            synchronous_generator_serial_traits< T, ItGen >::serialize(std::get< I >(value), out);
+            synchronous_generator_serial_traits< T, Generator >::serialize(std::get< I >(value), out);
         }
 
-        static inline constexpr void deserialize(std::tuple< Ts... >& value, ItGen out)
+        static inline constexpr void deserialize(std::tuple< Ts... >& value, Generator out)
         {
-            synchronous_generator_serial_traits< T, ItGen >::deserialize(std::get< I >(value), out);
+            synchronous_generator_serial_traits< T, Generator >::deserialize(std::get< I >(value), out);
         }
     };
 
-    template < typename It, typename... Ts >
-    struct synchronous_iterator_serial_traits< std::tuple< Ts... >, It >
+    template < typename Iterator, typename... Ts >
+    struct synchronous_iterator_serial_traits< std::tuple< Ts... >, Iterator >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& val, It outIt) -> It
+        static inline constexpr auto serialize(std::tuple< Ts... > const& val, Iterator outIterator) -> Iterator
         {
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::serialize(val, outIt);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::serialize(val, outIterator);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& val, It inIt) -> It
+        static inline constexpr auto deserialize(std::tuple< Ts... >& val, Iterator inIterator) -> Iterator
         {
-            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, It, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::deserialize(val, inIt);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< Ts... >, Iterator, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::deserialize(val, inIterator);
         }
     };
 
-    template < typename... Ts, typename ItGen >
-    struct synchronous_generator_serial_traits< std::tuple< Ts... >, ItGen >
+    template < typename... Ts, typename Generator >
+    struct synchronous_generator_serial_traits< std::tuple< Ts... >, Generator >
     {
-        static inline constexpr auto serialize(std::tuple< Ts... > const& val, ItGen out_gen) -> void
+        static inline constexpr auto serialize(std::tuple< Ts... > const& val, Generator g) -> void
         {
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::serialize(val, out_gen);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::serialize(val, g);
         }
 
-        static inline constexpr auto deserialize(std::tuple< Ts... >& val, ItGen in) -> void
+        static inline constexpr auto deserialize(std::tuple< Ts... >& val, Generator in) -> void
         {
-            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, ItGen, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::deserialize(val, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< Ts... >, Generator, 0, std::remove_cv_t< std::remove_reference_t< Ts > >... >::deserialize(val, in);
             return;
         }
     };
 
-    template < typename T1, typename T2, typename ItGen >
-    struct synchronous_generator_serial_traits< std::pair< T1, T2 >, ItGen >
+    template < typename T1, typename T2, typename Generator >
+    struct synchronous_generator_serial_traits< std::pair< T1, T2 >, Generator >
     {
-        static inline constexpr auto serialize(std::pair< T1, T2 > const& val, ItGen out_gen) -> void
+        static inline constexpr auto serialize(std::pair< T1, T2 > const& val, Generator g) -> void
         {
-            sychronous_generator_tuple_serial_traits< std::tuple< T1 const &, T2 const & >, ItGen, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::serialize(std::tie(val.first, val.second), out_gen);
+            sychronous_generator_tuple_serial_traits< std::tuple< T1 const &, T2 const & >, Generator, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::serialize(std::tie(val.first, val.second), g);
         }
 
-        static inline constexpr auto deserialize(std::pair< T1, T2 >& val, ItGen in) -> void
+        static inline constexpr auto deserialize(std::pair< T1, T2 >& val, Generator in) -> void
         {
             // TODO: Allow tuple lvalues
             auto lvalue = std::tie(val.first, val.second);
-            sychronous_generator_tuple_serial_traits< std::tuple< T1 &, T2 & >, ItGen, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::deserialize(lvalue, in);
+            sychronous_generator_tuple_serial_traits< std::tuple< T1 &, T2 & >, Generator, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::deserialize(lvalue, in);
             return;
         }
     };
 
-    template < typename T1, typename T2, typename It >
-    struct synchronous_iterator_serial_traits< std::pair< T1, T2 >, It >
+    template < typename T1, typename T2, typename Iterator >
+    struct synchronous_iterator_serial_traits< std::pair< T1, T2 >, Iterator >
     {
-        static inline constexpr auto serialize(std::pair< T1, T2 > const& val, It out) -> It
+        static inline constexpr auto serialize(std::pair< T1, T2 > const& val, Iterator out) -> Iterator
         {
-            return sychronous_iterator_tuple_serial_traits< std::tuple< T1 const &, T2 const & >, It, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::serialize(std::tie(val.first, val.second), out);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< T1 const &, T2 const & >, Iterator, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::serialize(std::tie(val.first, val.second), out);
         }
 
-        static inline constexpr auto deserialize(std::pair< T1, T2 >& val, It in) -> It
+        static inline constexpr auto deserialize(std::pair< T1, T2 >& val, Iterator in) -> Iterator
         {
             // TODO: Make it accept rvalues for tuples of references
             auto lvalue = std::tie(val.first, val.second);
-            return sychronous_iterator_tuple_serial_traits< std::tuple< T1 &, T2 & >, It, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::deserialize(lvalue, in);
+            return sychronous_iterator_tuple_serial_traits< std::tuple< T1 &, T2 & >, Iterator, 0, std::remove_cv_t< std::remove_reference_t< T1 > >, std::remove_cv_t< std::remove_reference_t< T2 > > >::deserialize(lvalue, in);
         }
     };
 
@@ -1694,6 +1703,7 @@ namespace rpnx
     template <>
     struct serial_traits< uintany >
     {
+        // TODO: Make this specailize on each type of integer 
         static inline constexpr bool has_fixed_serial_size()
         {
             return false;
@@ -1723,13 +1733,13 @@ namespace rpnx
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< uintany, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< uintany, Iterator >
     {
-        static inline It serialize(uintmax_t in, It out)
+        static inline Iterator serialize(uintmax_t in, Iterator out)
         {
             // This isn't the best function, it might give wrong results for really large values.
-            // It's good enough for now.
+            // Iterator's good enough for now.
             // Also, optimize this, it's not very fast
 
             uintmax_t base = in;
@@ -1758,7 +1768,7 @@ namespace rpnx
             return out;
         }
 
-        static inline It deserialize(uintmax_t& n, It in)
+        static inline Iterator deserialize(uintmax_t& n, Iterator in)
         {
             // This function is slow, optimize it
             n = 0;
@@ -1780,11 +1790,11 @@ namespace rpnx
         }
     };
 
-    template < typename ItF >
-    struct synchronous_generator_serial_traits< uintany, ItF >
+    template < typename IteratorF >
+    struct synchronous_generator_serial_traits< uintany, IteratorF >
     {
         template < typename Integral >
-        static inline constexpr void deserialize(Integral& i, ItF generator)
+        static inline constexpr void deserialize(Integral& i, IteratorF generator)
         {
             static_assert(std::is_integral_v< Integral >);
 
@@ -1887,17 +1897,18 @@ namespace rpnx
     };
 
     
-    template < typename T, typename K, typename A >
-    struct serial_traits< std::map< T, K, A > >
+    template <typename K, typename V>
+    struct map_serial_traits
     {
         static inline constexpr bool has_fixed_serial_size()
         {
             return false;
         }
-
-        static inline constexpr std::size_t serial_size(std::map< T, K, A > const& value)
+        
+        template <typename Map>
+        static inline constexpr std::size_t serial_size(Map const& value)
         {
-            using value_type = typename std::map< T, K, A >::value_type;
+            using value_type = typename Map::value_type;
             if constexpr (serial_traits< value_type >::has_fixed_serial_size())
             {
                 return serial_traits< uintany >::serial_size(value.size()) + serial_traits< value_type >::fixed_serial_size() * value.size();
@@ -1915,30 +1926,45 @@ namespace rpnx
         }
     };
 
-     template < typename T, typename K, typename A >
-    struct serial_traits< std::unordered_map< T, K, A > >
+    template < typename T, typename K, typename Comparator, typename Allocator >
+    struct serial_traits< std::map< T, K, Comparator, Allocator > >
     {
         static inline constexpr bool has_fixed_serial_size()
         {
             return false;
         }
 
-        static inline constexpr std::size_t serial_size(std::unordered_map< T, K, A > const& value)
+        static inline constexpr std::size_t serial_size(std::map< T, K, Comparator, Allocator > const& value)
         {
-            using value_type = typename std::unordered_map< T, K, A >::value_type;
-            if constexpr (serial_traits< value_type >::has_fixed_serial_size())
-            {
-                return serial_traits< uintany >::serial_size(value.size()) + serial_traits< value_type >::fixed_serial_size() * value.size();
-            }
-            else
-            {
-                std::size_t result = serial_traits< uintany >::serial_size(value.size());
-                for (auto const& x : value)
-                {
-                    result += serial_traits< value_type >::serial_size(x);
-                }
-                return result;
-            }
+            return map_serial_traits<T, K>::serial_size(value);
+        }
+    };
+
+    template < typename K, typename V, typename C,  typename A >
+    struct serial_traits< std::multimap< K, V, C, A > >
+    {
+        static inline constexpr bool has_fixed_serial_size()
+        {
+            return false;
+        }
+
+        static inline constexpr std::size_t serial_size(std::multimap< K, V, C, A > const& value)
+        {
+            return map_serial_traits<K, V>::serial_size(value);
+        }
+    };
+
+    template < typename K, typename V, typename H, typename E, typename A >
+    struct serial_traits< std::unordered_map< K, V, H, E, A > >
+    {
+        static inline constexpr bool has_fixed_serial_size()
+        {
+            return false;
+        }
+
+        static inline constexpr std::size_t serial_size(std::unordered_map< K, V, H, E, A > const& value)
+        {
+            return map_serial_traits<K, V>::serial_size(value);
         }
     };
     
@@ -1956,31 +1982,31 @@ namespace rpnx
         }
     };
 
-    template < typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::string, ItGenerator >
+    template < typename Generator >
+    struct synchronous_generator_serial_traits< std::string, Generator >
     {
-        static inline constexpr auto serialize(std::string const& val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::string const& val, Generator g)
         {
-            auto it = out_generator(serial_traits< std::string >::serial_size(val));
+            auto it = g(serial_traits< std::string >::serial_size(val));
             it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
             std::copy(val.begin(), val.end(), it);
         }
 
-        static inline constexpr auto deserialize(std::string& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::string& val, Generator g)
         {
             std::size_t count = 0;
-            synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(count, in_generator);
-            auto it = in_generator(count);
+            synchronous_generator_serial_traits< uintany, Generator >::deserialize(count, g);
+            auto it = g(count);
             val.resize(count);
             std::copy_n(it, count, val.begin());
         }
     };
 
-    template < typename T, typename Alloc, typename It >
-    struct synchronous_iterator_serial_traits< std::vector< T, Alloc >, It >
+    template < typename T, typename Alloc, typename Iterator >
+    struct synchronous_iterator_serial_traits< std::vector< T, Alloc >, Iterator >
     {
         //    static_assert(false, "debug message");
-        static inline constexpr auto serialize(std::vector< T, Alloc > const& val, It it) -> It
+        static inline constexpr auto serialize(std::vector< T, Alloc > const& val, Iterator it) -> Iterator
         {
             it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
             for (T const& x : val)
@@ -1990,7 +2016,7 @@ namespace rpnx
             return it;
         }
 
-        static inline constexpr auto deserialize(std::vector< T, Alloc >& value, It it) -> It
+        static inline constexpr auto deserialize(std::vector< T, Alloc >& value, Iterator it) -> Iterator
         {
             // TODO: Optimize
             value.clear();
@@ -2005,17 +2031,17 @@ namespace rpnx
         }
     };
 
-    template < typename It >
-    struct synchronous_iterator_serial_traits< std::string, It >
+    template < typename Iterator >
+    struct synchronous_iterator_serial_traits< std::string, Iterator >
     {
         //    static_assert(false, "debug message");
-        static inline constexpr auto serialize(std::string const& val, It it) -> It
+        static inline constexpr auto serialize(std::string const& val, Iterator it) -> Iterator
         {
             it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
             return std::copy(val.cbegin(), val.cend(), it);
         }
 
-        static inline constexpr auto deserialize(std::string& value, It it) -> It
+        static inline constexpr auto deserialize(std::string& value, Iterator it) -> Iterator
         {
             value.clear();
             std::size_t size = 0;
@@ -2029,15 +2055,15 @@ namespace rpnx
         }
     };
 
-    template < typename T2, typename Alloc, typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::vector< T2, Alloc >, ItGenerator >
+    template < typename T2, typename Alloc, typename Generator >
+    struct synchronous_generator_serial_traits< std::vector< T2, Alloc >, Generator >
     {
         // template <typename T2, typename Alloc2>
-        static inline constexpr auto serialize(std::vector< T2, Alloc > const& val, ItGenerator out_generator)
+        static inline constexpr auto serialize(std::vector< T2, Alloc > const& val, Generator g)
         {
             if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size())
             {
-                auto it = out_generator(serial_traits< std::vector< T2, Alloc > >::serial_size(val));
+                auto it = g(serial_traits< std::vector< T2, Alloc > >::serial_size(val));
                 it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
                 for (T2 const& x : val)
                 {
@@ -2046,25 +2072,25 @@ namespace rpnx
             }
             else
             {
-                auto it = out_generator(serial_traits< uintany >::serial_size(val.size()));
+                auto it = g(serial_traits< uintany >::serial_size(val.size()));
                 it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
                 for (auto const& x : val)
                 {
-                    synchronous_generator_serial_traits< T2, ItGenerator >::serialize(x, out_generator);
+                    synchronous_generator_serial_traits< T2, Generator >::serialize(x, g);
                 }
             }
         }
 
-        static inline constexpr auto deserialize(std::vector< T2, Alloc >& val, ItGenerator in_generator)
+        static inline constexpr auto deserialize(std::vector< T2, Alloc >& val, Generator g)
         {
             val.clear();
             if constexpr (serial_traits< typename std::vector< T2, Alloc >::value_type >::has_fixed_serial_size())
             {
                 std::size_t sz = 0;
-                synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
+                synchronous_generator_serial_traits< uintany, Generator >::deserialize(sz, g);
                 std::size_t total_size = sz * serial_traits< typename std::vector< T2, Alloc >::value_type >::fixed_serial_size();
 
-                auto it = in_generator(total_size);
+                auto it = g(total_size);
                 for (std::size_t i = 0; i != sz; i++)
                 {
                     T2 t;
@@ -2077,12 +2103,12 @@ namespace rpnx
             else
             {
                 std::size_t sz = 0;
-                synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
+                synchronous_generator_serial_traits< uintany, Generator >::deserialize(sz, g);
 
                 for (std::size_t i = 0; i != sz; i++)
                 {
                     T2 t;
-                    synchronous_generator_serial_traits< T2, ItGenerator >::deserialize(t, in_generator);
+                    synchronous_generator_serial_traits< T2, Generator >::deserialize(t, g);
                     val.emplace_back(std::move(t));
                 }
 
@@ -2091,15 +2117,81 @@ namespace rpnx
         }
     };
 
-    template < typename K, typename V, typename Alloc, typename ItGenerator >
-    struct synchronous_generator_serial_traits< std::map< K, V, Alloc >, ItGenerator >
+    template < typename K, typename V, typename Alloc, typename Generator >
+    struct synchronous_generator_serial_traits<std::map<K, V, Alloc>, Generator>
+    {
+        template <typename Map>
+        static inline constexpr auto serialize(Map const& val, Generator g)
+        {
+            synchronous_generator_map_serial_traits<K, V, Generator>::serialize(val, g);
+        }
+
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Generator g)
+        {
+            synchronous_generator_map_serial_traits<K, V, Generator>::deserialize(val, g);
+        }
+    };
+
+    template < typename K, typename V, typename Alloc, typename Generator >
+    struct synchronous_generator_serial_traits<std::multimap<K, V, Alloc>, Generator>
+    {
+        template <typename Map>
+        static inline constexpr auto serialize(Map const& val, Generator g)
+        {
+            synchronous_generator_map_serial_traits<K, V, Generator>::serialize(val, g);
+        }
+
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Generator g)
+        {
+            synchronous_generator_map_serial_traits<K, V, Generator>::deserialize(val, g);
+        }
+    };
+
+    template < typename K, typename V, typename Alloc, typename Generator >
+    struct synchronous_generator_serial_traits<std::unordered_map<K, V, Alloc>, Generator>
+    {
+        template <typename Map>
+        static inline constexpr auto serialize(Map const& val, Generator g)
+        {
+            synchronous_generator_map_serial_traits<K, V, Generator>::serialize(val, g);
+        }
+
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Generator g)
+        {
+            synchronous_generator_map_serial_traits<K, V, Generator>::deserialize(val, g);
+        }
+    };
+
+    template < typename K, typename V, typename Alloc, typename Generator >
+    struct synchronous_generator_serial_traits<std::unordered_multimap<K, V, Alloc>, Generator>
+    {
+        template <typename Map>
+        static inline constexpr auto serialize(Map const& val, Generator g)
+        {
+            synchronous_generator_map_serial_traits<K, V, Generator>::serialize(val, g);
+        }
+
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Generator g)
+        {
+            synchronous_generator_map_serial_traits<K, V, Generator>::deserialize(val, g);
+        }
+    };
+
+    template < typename K, typename V, typename Generator >
+    struct synchronous_generator_map_serial_traits
     {
         using T = typename std::pair<K, V>;
-        static inline constexpr auto serialize(std::map< K, V, Alloc > const& val, ItGenerator out_generator)
+
+        template <typename Map>
+        static inline constexpr auto serialize(Map const& val, Generator g)
         {
-            if constexpr (serial_traits< typename std::map< K, V, Alloc >::value_type >::has_fixed_serial_size())
+            if constexpr (serial_traits< typename Map::value_type >::has_fixed_serial_size())
             {
-                auto it = out_generator(serial_traits< typename std::map< K, V, Alloc >::value_type >::serial_size(val));
+                auto it = g(serial_traits< typename Map::value_type >::serial_size(val));
                 it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
                 for (auto const& x : val)
                 {
@@ -2108,24 +2200,26 @@ namespace rpnx
             }
             else
             {
-                auto it = out_generator(serial_traits< uintany >::serial_size(val.size()));
+                auto it = g(serial_traits< uintany >::serial_size(val.size()));
                 it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(val.size(), it);
                 for (auto const& x : val)
                 {
-                    synchronous_generator_serial_traits< T, ItGenerator >::serialize(x, out_generator);
+                    synchronous_generator_serial_traits< T, Generator >::serialize(x, g);
                 }
             }
         }
 
-        static inline constexpr auto deserialize(std::map< K, V, Alloc >& val, ItGenerator in_generator)
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Generator g)
         {
-            if constexpr (serial_traits< typename std::map< K, V, Alloc >::value_type >::has_fixed_serial_size())
+            val.clear();
+            if constexpr (serial_traits< typename Map::value_type >::has_fixed_serial_size())
             {
                 std::size_t sz = 0;
-                synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
+                synchronous_generator_serial_traits< uintany, Generator >::deserialize(sz, g);
                 std::size_t total_size = sz * serial_traits< T >::fixed_serial_size();
 
-                auto it = in_generator(total_size);
+                auto it = g(total_size);
                 for (std::size_t i = 0; i != sz; i++)
                 {
                     T t;
@@ -2138,12 +2232,12 @@ namespace rpnx
             else
             {
                 std::size_t sz = 0;
-                synchronous_generator_serial_traits< uintany, ItGenerator >::deserialize(sz, in_generator);
+                synchronous_generator_serial_traits< uintany, Generator >::deserialize(sz, g);
 
                 for (std::size_t i = 0; i != sz; i++)
                 {
                     std::pair<K, V> t;
-                    synchronous_generator_serial_traits< std::pair<K, V>, ItGenerator >::deserialize(t, in_generator);
+                    synchronous_generator_serial_traits< std::pair<K, V>, Generator >::deserialize(t, g);
                     val.insert(std::move(t));
                 }
 
@@ -2152,31 +2246,34 @@ namespace rpnx
         }
     };
 
-    template < typename K, typename V, typename Alloc, typename It >
-    struct synchronous_iterator_serial_traits< std::map< K, V, Alloc >, It >
+    template <typename K, typename V, typename Iterator>
+    struct synchronous_iterator_map_serial_traits
     {
         using T = typename std::pair<K, V>;
-        static inline constexpr auto serialize(std::map< K, V, Alloc > const& val, It out) -> It
+
+        template <typename Map>
+        static inline constexpr auto serialize(Map const & val, Iterator out) -> Iterator
         {
-            out = synchronous_iterator_serial_traits< uintany, It >::serialize(val.size(), out);
+            out = synchronous_iterator_serial_traits< uintany, Iterator >::serialize(val.size(), out);
             for (auto const& x : val)
             {
-                out = synchronous_iterator_serial_traits< T, It >::serialize(x, out);
+                out = synchronous_iterator_serial_traits< T, Iterator >::serialize(x, out);
             }
             return out;
         }
 
-        static inline constexpr auto deserialize(std::map< K, V, Alloc >& val, It in) -> It
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Iterator in) -> Iterator
         {
             val.clear();
             std::size_t sz = 0;
-            in = synchronous_iterator_serial_traits< uintany, It >::deserialize(sz, in);
+            in = synchronous_iterator_serial_traits< uintany, Iterator >::deserialize(sz, in);
             std::size_t total_size = sz * serial_traits< T >::fixed_serial_size();
             
             for (std::size_t i = 0; i != sz; i++)
             {
                 T t;
-                in = synchronous_iterator_serial_traits< T, It >::deserialize(t, in);
+                in = synchronous_iterator_serial_traits< T, Iterator >::deserialize(t, in);
                 val.emplace_back(std::move(t));
             }
 
@@ -2184,28 +2281,86 @@ namespace rpnx
         }
     };
 
-    template < typename T, typename ItF >
-    inline void quick_generator_serialize(T const& t, ItF f)
+    template < typename K, typename V, typename Alloc, typename Iterator >
+    struct synchronous_iterator_serial_traits< std::map< K, V, Alloc >, Iterator >
     {
-        synchronous_generator_serial_traits< T, ItF >::serialize(t, f);
+        using T = typename std::pair<K, V>;
+
+        template <typename Map>
+        static inline constexpr auto serialize(Map const& val, Iterator out) -> Iterator
+        {
+            return synchronous_iterator_map_serial_traits<K, V, Iterator>::serialize(val, out);
+        }
+
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Iterator in) -> Iterator
+        {
+            return sychronous_iterator_map_serial_traits<K, V>::deserialize(val, in);
+        }
+    };
+
+
+    template < typename K, typename V, typename Alloc, typename Iterator >
+    struct synchronous_iterator_serial_traits< std::multimap< K, V, Alloc >, Iterator >
+    {
+        using T = typename std::pair<K, V>;
+
+        template <typename Map>
+        static inline constexpr auto serialize(Map const& val, Iterator out) -> Iterator
+        {
+            return synchronous_iterator_map_serial_traits<K, V, Iterator>::serialize(val, out);
+        }
+
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Iterator in) -> Iterator
+        {
+            return sychronous_iterator_map_serial_traits<K, V>::deserialize(val, in);
+        }
+    };
+
+    template < typename K, typename V, typename Alloc, typename Iterator >
+    struct synchronous_iterator_serial_traits< std::unordered_multimap< K, V, Alloc >, Iterator >
+    {
+        using T = typename std::pair<K, V>;
+
+        template <typename Map>
+        static inline constexpr auto serialize(Map const& val, Iterator out) -> Iterator
+        {
+            return synchronous_iterator_map_serial_traits<K, V, Iterator>::serialize(val, out);
+        }
+
+        template <typename Map>
+        static inline constexpr auto deserialize(Map & val, Iterator in) -> Iterator
+        {
+            return sychronous_iterator_map_serial_traits<K, V>::deserialize(val, in);
+        }
+    };
+
+    
+
+
+    template < typename T, typename IteratorF >
+    inline void quick_generator_serialize(T const& t, IteratorF f)
+    {
+        synchronous_generator_serial_traits< T, IteratorF >::serialize(t, f);
     }
 
-    template < typename T, typename It >
-    inline auto quick_iterator_serialize(T const& t, It i) -> It
+    template < typename T, typename Iterator >
+    inline auto quick_iterator_serialize(T const& t, Iterator i) -> Iterator
     {
-        return synchronous_iterator_serial_traits< T, It >::serialize(t, i);
+        return synchronous_iterator_serial_traits< T, Iterator >::serialize(t, i);
     }
 
-    template < typename T, typename ItF >
-    inline void quick_generator_deserialize(T& t, ItF f)
+    template < typename T, typename IteratorF >
+    inline void quick_generator_deserialize(T& t, IteratorF f)
     {
-        synchronous_generator_serial_traits< T, ItF >::deserialize(t, f);
+        synchronous_generator_serial_traits< T, IteratorF >::deserialize(t, f);
     }
 
-    template < typename T, typename It >
-    inline auto quick_iterator_deserialize(T& t, It i) -> It
+    template < typename T, typename Iterator >
+    inline auto quick_iterator_deserialize(T& t, Iterator i) -> Iterator
     {
-        return synchronous_iterator_serial_traits< T, It >::deserialize(t, i);
+        return synchronous_iterator_serial_traits< T, Iterator >::deserialize(t, i);
     }
 
     template < typename T >
@@ -2220,10 +2375,16 @@ namespace rpnx
         static const constexpr bool value = serial_traits< T >::has_fixed_serial_size();
     };
 
-    static_assert(c_fixed_serial_size< std::tuple< std::int32_t, std::int32_t > >::value == true);
-    static_assert(c_fixed_serial_size< std::tuple< std::int32_t, std::string > >::value == false);
-
+    static_assert(serial_traits< std::tuple< std::int32_t, std::int32_t > >::has_fixed_serial_size() == true);
+    static_assert(serial_traits< std::tuple< std::int32_t, std::string > >::has_fixed_serial_size() == false);
     static_assert(serial_traits< std::tuple< std::int32_t, std::int32_t > >::fixed_serial_size() == 8);
+    static_assert(serial_traits< std::tuple< bool, bool, bool > >::fixed_serial_size() == 1);
+    static_assert(serial_traits< std::tuple< bool, bool, std::uint8_t, bool, bool > >::fixed_serial_size() == 3);
+    static_assert(serial_traits< std::tuple< bool, bool, bool, bool, std::uint8_t > >::fixed_serial_size() == 2);
+    static_assert(serial_traits< std::tuple< bool, bool, bool, bool, bool, bool, bool, bool, std::uint8_t > >::fixed_serial_size() == 2);
+    static_assert(serial_traits< std::tuple< bool, bool, bool, bool, bool, bool, bool, bool, bool, std::uint8_t > >::fixed_serial_size() == 3);
+    //static_assert(serial_traits< std::tuple< std::bitset<4>, std::bitset<4> >::fixed_serial_size() == 1);
+
 
 } // namespace rpnx
 

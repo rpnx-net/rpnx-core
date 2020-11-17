@@ -17,7 +17,7 @@ void test(std::string_view const& str, T const& val, std::vector< char > const& 
 
 
     auto print_output = [&] (std::vector<char> const & what){
-        return;
+        //return;
         std::cout << "[";
 
         for (int i = 0; i < what.size(); i++) 
@@ -232,8 +232,11 @@ int main()
         {
             std::map< std::string, std::int16_t > val = {{"bar", 1}, {"foo", 2}};
             test("std::map< std::string, std::int16_t >", val, {2, 3, 'b', 'a', 'r', 1, 0, 3, 'f', 'o', 'o', 2, 0});
-            
+        }
 
+        {
+            std::multimap< std::string, std::int16_t > val = {{"bar", 1}, {"bar", 2}, {"foo", 2}};
+            test("std::multimap< std::string, std::int16_t >", val, {3, 3, 'b', 'a', 'r', 1, 0, 3, 'b', 'a','r', 2, 0, 3, 'f', 'o', 'o', 2, 0});
         }
        
     }
