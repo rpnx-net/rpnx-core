@@ -238,6 +238,28 @@ int main()
             std::multimap< std::string, std::int16_t > val = {{"bar", 1}, {"bar", 2}, {"foo", 2}};
             test("std::multimap< std::string, std::int16_t >", val, {3, 3, 'b', 'a', 'r', 1, 0, 3, 'b', 'a','r', 2, 0, 3, 'f', 'o', 'o', 2, 0});
         }
+
+        {
+
+            std::vector<int32_t> vec1 { 1, 2, 3};
+            std::vector<std::uint8_t> output;
+            auto it = std::back_inserter(output);
+            rpnx::synchronous_iterator_serial_traits< std::vector< rpnx::uintany > , decltype(it) >::serialize(vec1, it );
+            std::cout << "Output expected matches? " << std::boolalpha << (output == std::vector<std::uint8_t>{3, 1, 2, 3}) << std::endl;
+
+            std::vector<int32_t> vec2;
+            std::size_t n = 0;
+            auto gen = [&](std::size_t c)
+            {
+                auto it = output.begin() + n;
+                n += c;
+                if (n > output.size()) throw std::out_of_range("out of range");
+                return it;
+            };
+            rpnx::synchronous_generator_serial_traits< std::vector< rpnx::uintany >, decltype(gen) > ::deserialize(vec2, gen);
+
+            std::cout << "Deserialized output matches? " << std::boolalpha << (vec1 == vec2) << std::endl;
+        }
        
     }
     catch (std::exception const & er)
