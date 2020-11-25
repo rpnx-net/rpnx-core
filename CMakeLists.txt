@@ -37,6 +37,13 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   #list ( APPEND RPNX_CORE_HEADERS public/headers/linux/rpnx/network.hpp)
 endif()
 
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+  target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/mac/network.cpp)
+  target_include_directories(rpnx-core PUBLIC public/headers/mac)
+  #list ( APPEND RPNX_CORE_HEADERS public/headers/linux/rpnx/network.hpp)
+endif()
+
+
 
 target_sources(rpnx-core PRIVATE ${RPNX_CORE_HEADERS} )
 

@@ -5,11 +5,18 @@
 #include <winsock2.h>
 #endif
 
-#ifdef __linux__
+#if  defined(__linux__) || defined(__APPLE__)
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <unistd.h>
+
+
+
+
+#endif
+
+#if defined(__linux__)
 #include <sys/epoll.h>
 #endif
 
@@ -89,12 +96,12 @@ namespace rpnx
     using native_socket_type = SOCKET;
 #endif
 
-#ifdef __linux__
+#if  defined(__linux__) || defined(__APPLE__)
     inline std::error_code get_os_network_error_code()
     {
       return std::error_code(errno, std::system_category());
     }
-    using native_socket_type = int;
+    using native_socket_type = int; 
 #endif
 
     class async_service;
@@ -161,7 +168,7 @@ namespace rpnx
           m_addr[1] = addr.S_un.S_un_b.s_b2;
           m_addr[2] = addr.S_un.S_un_b.s_b3;
           m_addr[3] = addr.S_un.S_un_b.s_b4;
-          #elif defined(__linux__)
+          #elif defined(__linux__) || defined(__APPLE__)
           m_addr[0] = reinterpret_cast<char const*>(&addr.s_addr)[0];
           m_addr[1] = reinterpret_cast<char const*>(&addr.s_addr)[1];
           m_addr[2] = reinterpret_cast<char const*>(&addr.s_addr)[2];
@@ -180,7 +187,7 @@ namespace rpnx
       addr.S_un.S_un_b.s_b4 = m_addr[3];
       return addr;
 #endif
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
       return {static_cast<in_addr_t>(m_addr[0] | (m_addr[1] << 8) | (m_addr[3] << 16) | (m_addr[3] << 24) )};
 #endif
     }
