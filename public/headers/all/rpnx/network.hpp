@@ -296,16 +296,13 @@ namespace rpnx
           m_addr[1] = native_addr.sin_addr.S_un.S_un_b.s_b2;
           m_addr[2] = native_addr.sin_addr.S_un.S_un_b.s_b3;
           m_addr[3] = native_addr.sin_addr.S_un.S_un_b.s_b4;
-#elif defined(__FreeBSD__)
-	  m_addr[0] = native_addr.sin_addr.s_addr >> 24;
-          m_addr[1] = native_addr.sin_addr.s_addr >> 16;
-          m_addr[2] = native_addr.sin_addr.s_addr >> 8;
-          m_addr[3] = native_addr.sin_addr.s_addr >> 0;
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
           m_addr[0] = native_addr.sin_addr.s_addr >> 24;
           m_addr[1] = native_addr.sin_addr.s_addr >> 16;
           m_addr[2] = native_addr.sin_addr.s_addr >> 8;
           m_addr[3] = native_addr.sin_addr.s_addr >> 0;
+#else
+#error Not implemented
 #endif
       }
 
@@ -321,9 +318,7 @@ namespace rpnx
           : m_addr(other.address()), m_port(other.port())
       {
 
-      }
-
-      
+      }      
 
       sockaddr_in native() const
       {
@@ -344,12 +339,9 @@ namespace rpnx
 
   class ip4_udp_socket
   {
-public:
-#ifdef _WIN32
+  public:
       native_socket_type m_s;
-#else
-      native_socket_type m_s;
-#endif
+
   public:
       ip4_udp_socket() noexcept
       {     
@@ -449,13 +441,13 @@ public:
         }
         assert(len == sizeof(addr));
         return addr;
-        #endif
+#endif
 
       }
 
       void close()
       {
-          #ifdef _WIN32
+#ifdef _WIN32
           detail::wsa_intializer::singleton();
           if (m_s != INVALID_SOCKET)
           {
@@ -469,21 +461,21 @@ public:
               ::close(m_s);
               m_s = -1;
           }
-          #endif
+#endif
       }
 
       void open()
       {
-          #ifdef _WIN32
+#ifdef _WIN32
           detail::wsa_intializer::singleton();
           close();
           m_s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
           if (m_s == INVALID_SOCKET) throw network_error("udp_ip4_socket::open()", get_os_network_error_code());
-          #else
+#else
           this->close();
           m_s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
           if (m_s == -1) throw network_error("udp_ip4_socket::open()", get_os_network_error_code());
-          #endif
+#endif
       }
 
       auto native() const noexcept
@@ -498,11 +490,7 @@ public:
   {
 
   private:
-#ifdef _WIN32
-      SOCKET m_sock;
-#else
-      int m_sock;
- #endif
+      native_socket_type m_sock;
 
   public:
       ip4_tcp_acceptor() noexcept
@@ -545,21 +533,21 @@ public:
 
       void open()
       {
-          #ifdef _WIN32
+#ifdef _WIN32
           detail::wsa_intializer::singleton();
           close();
           m_sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
           if (m_sock == INVALID_SOCKET) throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
-          #else
+#else
           close();
           m_sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
           if (m_sock == -1) throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
-          #endif
+#endif
       }
 
       void listen(ip4_tcp_endpoint const & listen_addr)
       {
-          #ifdef _WIN32
+#ifdef _WIN32
           detail::wsa_intializer::singleton();
           open();
           ::sockaddr_in sock_addr = listen_addr.native();
@@ -568,7 +556,7 @@ public:
           {
               throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
           }
-          #else
+#else
           this->open();
           ::sockaddr_in sock_addr = listen_addr.native();
           ::bind(m_sock, (sockaddr*)&sock_addr, sizeof(sockaddr_in));
@@ -576,7 +564,7 @@ public:
           {
               throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
           }
-          #endif
+#endif
               
       }
 
@@ -596,11 +584,11 @@ public:
   class ip4_tcp_connection
   {
   private:
-  #ifdef _WIN32
+#ifdef _WIN32
       SOCKET m_socket;
-  #else
+#else
       int m_socket;
-  #endif
+#endif
   public:
       ip4_tcp_connection() noexcept
           : m_socket(-1)
@@ -732,7 +720,7 @@ public:
   template <typename It>
   void net_send(ip4_udp_socket& socket, ip4_udp_endpoint const & to, It begin_packet, It end_packet)
   {
-      #ifdef _WIN32
+#ifdef _WIN32
       detail::wsa_intializer::singleton();
       sockaddr_in dest = to.native();
       std::vector< char > data;
@@ -747,7 +735,7 @@ public:
           throw network_error("upd_ip4_socket::send()", get_os_network_error_code());
       }
       return;
-      #else
+#else
       sockaddr_in dest = to.native();
       std::vector<std::byte> data(begin_packet, end_packet);
 
@@ -757,7 +745,7 @@ public:
           throw network_error("upd_ip4_socket::send()", get_os_network_error_code());
       }
       return;
-      #endif
+ #endif
   }
 
 
