@@ -5,16 +5,25 @@
 #include <winsock2.h>
 #endif
 
-#if  defined(__linux__) || defined(__APPLE__)
+#if  defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#endif
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <unistd.h>
 
-
-
-
 #endif
+
+#if defined(__FreeBSD__)
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
+
 
 #if defined(__linux__)
 #include <sys/epoll.h>
@@ -96,7 +105,7 @@ namespace rpnx
     using native_socket_type = SOCKET;
 #endif
 
-#if  defined(__linux__) || defined(__APPLE__)
+#if  defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
     inline std::error_code get_os_network_error_code()
     {
       return std::error_code(errno, std::system_category());
@@ -187,7 +196,7 @@ namespace rpnx
       addr.S_un.S_un_b.s_b4 = m_addr[3];
       return addr;
 #endif
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
       return {static_cast<in_addr_t>(m_addr[0] | (m_addr[1] << 8) | (m_addr[3] << 16) | (m_addr[3] << 24) )};
 #endif
     }
@@ -282,17 +291,22 @@ namespace rpnx
           : ip4_udp_endpoint()
       {
           m_port = ntohs(native_addr.sin_port);
-          #ifdef _WIN32
+#ifdef _WIN32
           m_addr[0] = native_addr.sin_addr.S_un.S_un_b.s_b1;
           m_addr[1] = native_addr.sin_addr.S_un.S_un_b.s_b2;
           m_addr[2] = native_addr.sin_addr.S_un.S_un_b.s_b3;
           m_addr[3] = native_addr.sin_addr.S_un.S_un_b.s_b4;
-          #else
+#elif defined(__FreeBSD__)
+	  m_addr[0] = native_addr.sin_addr.s_addr >> 24;
+          m_addr[1] = native_addr.sin_addr.s_addr >> 16;
+          m_addr[2] = native_addr.sin_addr.s_addr >> 8;
+          m_addr[3] = native_addr.sin_addr.s_addr >> 0;
+#elif defined(__linux__) || defined(__APPLE__)
           m_addr[0] = native_addr.sin_addr.s_addr >> 24;
           m_addr[1] = native_addr.sin_addr.s_addr >> 16;
           m_addr[2] = native_addr.sin_addr.s_addr >> 8;
           m_addr[3] = native_addr.sin_addr.s_addr >> 0;
-          #endif
+#endif
       }
 
       inline ip4_udp_endpoint(ip4_address addr, uint16_t port)
