@@ -49,6 +49,12 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
 endif()
 
 
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
+ target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/linux/network.cpp)
+ target_include_directories(rpnx-core PUBLIC public/headers/mac)
+endif()
+
+
 message("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
 
