@@ -594,6 +594,25 @@ public:
 
       }
 
+#ifndef _WIN32
+      ip4_tcp_connection(ip4_tcp_endpoint const & ep)
+      {
+          m_socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+          if (m_socket == -1)
+          {
+              throw network_error("ip4_tcp_connection::ip4_tcp_connection", get_os_network_error_code());
+          }
+          
+          sockaddr_in addr = ep.native();
+          int c = ::connect(m_socket, (sockaddr const *) &addr, sizeof(addr)  );
+          if (m_socket == -1)
+          {
+              throw network_error("ip4_tcp_connection::ip4_tcp_connection", get_os_network_error_code());
+          }
+      }
+#endif
+// TODO: Implement on windows
+
       ip4_tcp_connection(ip4_tcp_connection const&) = delete;
 
       ip4_tcp_connection(ip4_tcp_connection&& other) noexcept
