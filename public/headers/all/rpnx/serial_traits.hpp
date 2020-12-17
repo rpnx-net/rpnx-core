@@ -2308,10 +2308,7 @@ namespace rpnx
             return synchronous_iterator_map_serial_traits<K, V, Iterator>::deserialize(val, in);
         }
     };
-
     
-
-
     template < typename T, typename IteratorF >
     inline void quick_generator_serialize(T const& t, IteratorF f)
     {
