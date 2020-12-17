@@ -33,7 +33,7 @@ endif()
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/linux/network.cpp)
-  target_include_directories(rpnx-core PUBLIC public/headers/linux)
+  #target_include_directories(rpnx-core PUBLIC public/headers/linux)
   #list ( APPEND RPNX_CORE_HEADERS public/headers/linux/rpnx/network.hpp)
 endif()
 
@@ -45,19 +45,17 @@ endif()
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
  target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/bsd/network.cpp)
- target_include_directories(rpnx-core PUBLIC public/headers/mac)
+ #target_include_directories(rpnx-core PUBLIC public/headers/mac)
 endif()
 
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
  target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/linux/network.cpp)
- target_include_directories(rpnx-core PUBLIC public/headers/mac)
+ #target_include_directories(rpnx-core PUBLIC public/headers/linux)
 endif()
 
 
 message("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
-
-
 
 
 target_sources(rpnx-core PRIVATE ${RPNX_CORE_HEADERS} )
