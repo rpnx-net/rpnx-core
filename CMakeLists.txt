@@ -10,8 +10,8 @@ target_include_directories(rpnx-core PUBLIC public/headers/all)
 list ( APPEND RPNX_CORE_HEADERS
     public/headers/all/rpnx/network_error.hpp 
     public/headers/all/rpnx/network.hpp 
-    public/headers/all/rpnx/indirect_variant.hpp  
-    public/headers/all/rpnx/apply.hh 
+    public/headers/all/rpnx/indirect_variant.hpp
+        public/headers/all/rpnx/apply.hpp
     public/headers/all/rpnx/serial_traits.hpp
     public/headers/all/rpnx/derivator.hpp
     public/headers/all/rpnx/monoque.hpp
