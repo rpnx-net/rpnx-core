@@ -2,8 +2,12 @@ cmake_minimum_required(VERSION 3.15)
 
 project(RPNXCore)
 
-add_library(rpnx-core)
+add_library(rpnx-core public/headers/all/rpnx/experimental/scoped_action.hpp)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
+
+target_sources(rpnx-core PRIVATE
+        private/sources/all/experimental/priority_dispatcher.cpp
+        )
 
 target_include_directories(rpnx-core PUBLIC public/headers/all)
 
@@ -18,7 +22,8 @@ list ( APPEND RPNX_CORE_HEADERS
     public/headers/all/rpnx/experimental/thread_pool.hpp
     public/headers/all/rpnx/assert.hpp
     public/headers/all/rpnx/experimental/processor.hpp
-)
+    public/headers/all/rpnx/experimental/priority_dispatcher.hpp
+    )
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
 
@@ -82,7 +87,10 @@ set_target_properties(rpnx-core-test4 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-test4 PRIVATE private/sources/all/test4.cpp)
 target_link_libraries(rpnx-core-test4 rpnx-core)
 
-
+add_executable(rpnx-core-test5)
+set_target_properties(rpnx-core-test5 PROPERTIES CXX_STANDARD 17)
+target_sources(rpnx-core-test5 PRIVATE private/sources/all/test5.cpp)
+target_link_libraries(rpnx-core-test5 rpnx-core)
 
 add_executable(rpnx-core-benchmark1)
 set_target_properties(rpnx-core-benchmark1 PROPERTIES CXX_STANDARD 17)
