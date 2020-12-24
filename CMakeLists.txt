@@ -11,13 +11,14 @@ list ( APPEND RPNX_CORE_HEADERS
     public/headers/all/rpnx/network_error.hpp 
     public/headers/all/rpnx/network.hpp 
     public/headers/all/rpnx/indirect_variant.hpp
-        public/headers/all/rpnx/apply.hpp
+    public/headers/all/rpnx/apply.hpp
     public/headers/all/rpnx/serial_traits.hpp
     public/headers/all/rpnx/derivator.hpp
     public/headers/all/rpnx/monoque.hpp
     public/headers/all/rpnx/meta.hpp
     public/headers/all/rpnx/thread_pool.hpp
     public/headers/all/rpnx/assert.hpp
+    public/headers/all/rpnx/experimental/processor.hpp
 )
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
