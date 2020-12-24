@@ -23,7 +23,7 @@ list ( APPEND RPNX_CORE_HEADERS
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
 
   target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/windows/network.cpp)
-  target_include_directories(rpnx-core PUBLIC public/headers/windows)
+  #target_include_directories(rpnx-core PUBLIC public/headers/windows)
   #list ( APPEND RPNX_CORE_HEADERS public/headers/windows/rpnx/network.hpp)
   target_compile_definitions(rpnx-core PRIVATE _MBCS)
   target_link_libraries(rpnx-core ws2_32)
@@ -45,7 +45,8 @@ endif()
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
  target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/bsd/network.cpp)
- #target_include_directories(rpnx-core PUBLIC public/headers/mac)
+
+ #target_include_directories(rpnx-core PUBLIC public/headers/bsd)
 endif()
 
 
