@@ -3,16 +3,6 @@
 
 #include <assert.h>
 
-namespace rpnx
-{
-    namespace detail
-    {
-        inline void rpnx_assert_impl(char const * str, bool value)
-        {
-
-        }
-    }
-}
 
 #if defined(NDEBUG) || defined(_NDEBUG)
 #if defined(__GNUC__) && defined(__cplusplus)
