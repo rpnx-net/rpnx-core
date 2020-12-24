@@ -4,7 +4,7 @@
 #include <string>
 #include <rpnx/meta.hpp>
 
-#include <rpnx/thread_pool.hpp>
+#include <rpnx/experimental/thread_pool.hpp>
 
 struct foo;
 

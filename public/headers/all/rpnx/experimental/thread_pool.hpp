@@ -14,9 +14,6 @@ namespace rpnx
 {
     class thread_pool
     {
-        
-
-
         struct post_item
         {
             void (*m_func)(void*);
