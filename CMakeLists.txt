@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.15)
 
 project(RPNXCore)
 
+find_package(Threads REQUIRED)
+
 add_library(rpnx-core public/headers/all/rpnx/experimental/scoped_action.hpp)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
 
@@ -66,6 +68,8 @@ message("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
 target_sources(rpnx-core PRIVATE ${RPNX_CORE_HEADERS} )
 
+target_link_libraries(rpnx-core Threads::Threads)
+
 add_executable(rpnx-core-test1)
 set_target_properties(rpnx-core-test1 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-test1 PRIVATE private/sources/all/test1.cpp)
@@ -95,7 +99,7 @@ target_link_libraries(rpnx-core-test5 rpnx-core)
 add_executable(rpnx-core-benchmark1)
 set_target_properties(rpnx-core-benchmark1 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-benchmark1 PRIVATE private/sources/all/bm1.cpp)
-target_link_libraries(rpnx-core-benchmark1 rpnx-core)
+target_link_libraries(rpnx-core-benchmark1 rpnx-core Threads::Threads)
 
 install(TARGETS rpnx-core EXPORT rpnx_exports)
 export(EXPORT rpnx_exports FILE RPNXCoreConfig.cmake  NAMESPACE RPNX::)
