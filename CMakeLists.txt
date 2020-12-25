@@ -25,6 +25,7 @@ list ( APPEND RPNX_CORE_HEADERS
     public/headers/all/rpnx/assert.hpp
     public/headers/all/rpnx/experimental/processor.hpp
     public/headers/all/rpnx/experimental/priority_dispatcher.hpp
+        public/headers/all/rpnx/experimental/monoque.hpp
     )
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")

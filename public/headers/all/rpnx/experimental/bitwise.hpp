@@ -32,6 +32,38 @@ namespace rpnx
         return c;
     }
 
+    template <typename T>
+    T bit_floor(T t)
+    {
+        static_assert(std::is_unsigned_v<T>);
+
+        if (t == std::numeric_limits<T>::max()) return (T(1) << (CHAR_BIT*sizeof(T) - 1));
+        T val = t+1;
+        val |= val >> 1;
+        val |= val >> 2;
+        val |= val >> 4;
+        val |= val >> 8;
+        if constexpr (sizeof(T)*CHAR_BIT > 8)
+        {
+            val |= val >> 8;
+        }
+        if constexpr (sizeof(T)*CHAR_BIT > 16)
+        {
+            val |= val >> 16;
+        }
+        if constexpr (sizeof(T)*CHAR_BIT > 32)
+        {
+            val |= val >> 32;
+        }
+        if constexpr (sizeof(T)*CHAR_BIT > 64)
+        {
+            val |= val >> 64;
+        }
+        val = val + 1;
+        return val;
+
+    }
+
 #ifdef __GNUC__
 #define RPNX_HAVE_BUILTIN_GCC_BITWISE
 #endif
