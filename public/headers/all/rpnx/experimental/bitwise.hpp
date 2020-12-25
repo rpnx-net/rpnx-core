@@ -43,15 +43,6 @@ namespace rpnx
         return c;
     }
 
-    template <typename T>
-    inline constexpr T bit_floor(T t)
-    {
-        static_assert(std::is_unsigned_v<T>);
-        return T(1) << (CHAR_BIT*sizeof(T) - countl_zero(t) -1);
-    }
-    static_assert(bit_floor(std::uint32_t(3)) == 2);
-    static_assert(bit_floor(std::uint32_t(2)) == 2);
-    static_assert(bit_floor(std::uint32_t(9)) == 8);
 
 
 
@@ -149,6 +140,17 @@ inline int bit_reverse(unsigned long long x)
     {
         return countl_zero(~v);
     }
+
+    template <typename T>
+    inline constexpr T bit_floor(T t)
+    {
+        static_assert(std::is_unsigned_v<T>);
+        return T(1) << (CHAR_BIT*sizeof(T) - countl_zero(t) -1);
+    }
+    static_assert(bit_floor(std::uint32_t(3)) == 2);
+    static_assert(bit_floor(std::uint32_t(2)) == 2);
+    static_assert(bit_floor(std::uint32_t(9)) == 8);
+
 }
 
 #endif // RPNXCORE_BITWISE_HPP
