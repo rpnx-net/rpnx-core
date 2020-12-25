@@ -5,8 +5,11 @@
 
 int main()
 {
+    std::cout <<"hello" << std::endl;
+    std::cout << rpnx::bit_floor(3u) << std::endl;
     rpnx::experimental::monoque<int> m;
 
+    return 0;
     for (int i = 0; i < 100; i++)
     {
         m.emplace_back(i);
