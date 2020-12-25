@@ -9,8 +9,8 @@ All rights reserved.
 See rpnx-core/LICENSE.txt
 */
 
-#ifndef RPNX_MONOQUE_HH
-#define RPNX_MONOQUE_HH
+#ifndef RPNX_MONOQUE_old_HH
+#define RPNX_MONOQUE_old_HH
 
 #include <array>
 #include <assert.h>

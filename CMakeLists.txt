@@ -19,7 +19,7 @@ list ( APPEND RPNX_CORE_HEADERS
     public/headers/all/rpnx/apply.hpp
     public/headers/all/rpnx/serial_traits.hpp
     public/headers/all/rpnx/derivator.hpp
-    public/headers/all/rpnx/monoque.hpp
+        public/headers/all/rpnx/legacy/monoque.hpp
     public/headers/all/rpnx/meta.hpp
     public/headers/all/rpnx/experimental/thread_pool.hpp
     public/headers/all/rpnx/assert.hpp
@@ -95,6 +95,12 @@ add_executable(rpnx-core-test5)
 set_target_properties(rpnx-core-test5 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-test5 PRIVATE private/sources/all/test5.cpp)
 target_link_libraries(rpnx-core-test5 rpnx-core)
+
+add_executable(rpnx-core-test6)
+set_target_properties(rpnx-core-test6 PROPERTIES CXX_STANDARD 17)
+target_sources(rpnx-core-test6 PRIVATE private/sources/all/test6.cpp)
+target_link_libraries(rpnx-core-test6 rpnx-core)
+
 
 add_executable(rpnx-core-benchmark1)
 set_target_properties(rpnx-core-benchmark1 PROPERTIES CXX_STANDARD 17)
