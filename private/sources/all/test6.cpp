@@ -6,7 +6,7 @@
 int main()
 {
     std::cout <<"hello" << std::endl;
-    std::cout << rpnx::bit_floor(3u) << std::endl;
+    std::cout << rpnx::bit_floor(5u) << std::endl;
     rpnx::experimental::monoque<int> m;
 
     return 0;
