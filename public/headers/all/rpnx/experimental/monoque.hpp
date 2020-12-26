@@ -76,7 +76,13 @@ namespace rpnx
                 std::size_t m_size = 0;
                 std::size_t m_allocated_blocks = 0;
                 std::size_t m_capacity_blocks = 0;
-                void** m_block_list = nullptr;
+                T** m_block_list = nullptr;
+
+                template <typename T2>
+                auto get_rebound_allocator() const
+                {
+                    return typename std::allocator_traits< Alloc >::template rebind_alloc< T2 >(get_allocator());
+                }
 
                 static inline std::size_t index1(std::size_t at)
                 {
@@ -92,56 +98,104 @@ namespace rpnx
                     return at & mask;
                 }
 
-                static std::size_t size_of_primary_block(std::size_t index)
+                static std::size_t size_of_block(std::size_t index)
                 {
                     if (index == 0)
                         return 2;
                     return std::size_t(1) << index;
                 }
 
+                void expand_block_list()
+                {
+                    auto storage_block_list_allocator = get_rebound_allocator<T*>();
+
+                    if (m_allocated_blocks == 0)
+                    {
+
+                        T** v_block_list = storage_block_list_allocator.allocate(8);
+                        m_capacity_blocks = 8;
+                        for (int i = 0; i < m_capacity_blocks; i++)
+                        {
+                            std::allocator_traits<decltype(storage_block_list_allocator)>::construct(storage_block_list_allocator, v_block_list + i, nullptr);
+                            v_block_list[i] = std::launder(v_block_list[i]);
+                        }
+
+                        m_block_list = std::launder(v_block_list);
+                        m_capacity_blocks = 8;
+                    }
+                    else
+                    {
+                        T** v_block_list = storage_block_list_allocator.allocate(sizeof(std::size_t) * CHAR_BIT);
+
+                        for (int i = 0; i < m_capacity_blocks; i++)
+                        {
+                            std::allocator_traits<decltype(storage_block_list_allocator)>::construct(storage_block_list_allocator, v_block_list + i, m_block_list[i]);
+                            v_block_list[i] = std::launder(v_block_list[i]);
+                        }
+
+                        for (int i = m_capacity_blocks; i < sizeof(std::size_t) * CHAR_BIT; i++)
+                        {
+                            std::allocator_traits<decltype(storage_block_list_allocator)>::construct(storage_block_list_allocator, v_block_list + i, nullptr);
+                            v_block_list[i] = std::launder(v_block_list[i]);
+                        }
+
+                        std::swap(m_block_list, v_block_list);
+
+
+                        for (int i = 0; i < m_capacity_blocks; i++)
+                        {
+                            std::allocator_traits<decltype(storage_block_list_allocator)>::destroy(storage_block_list_allocator, v_block_list+i);
+                        }
+
+                        storage_block_list_allocator.deallocate(v_block_list, m_capacity_blocks);
+
+                        m_capacity_blocks = sizeof(std::size_t) * CHAR_BIT;
+                    }
+                }
+
                 void add_block()
                 {
+                    RPNX_ASSERT(m_allocated_blocks < sizeof(std::size_t) * CHAR_BIT);
+
+                    auto storage_block_allocator = get_rebound_allocator<T>();
+
                     if (m_allocated_blocks == m_capacity_blocks)
                     {
-                        if (m_allocated_blocks == 0)
-                        {
-                            void* v_storage_block_list = (typename std::allocator_traits< Alloc >::template rebind_alloc< void* >(get_allocator())).allocate(sizeof(void*) * 8);
-                            void** v_blocks_list = new (v_storage_block_list) void*[8];
-                            for (int i = 0; i < m_capacity_blocks; i++)
-                            {
-                                v_blocks_list[i] = nullptr;
-                            }
-                            m_block_list = v_blocks_list;
-                            m_capacity_blocks = 8;
-                        }
-                        else
-                        {
-                            void* v_storage_block_list = (typename std::allocator_traits< Alloc >::template rebind_alloc< void* >(get_allocator())).allocate(sizeof(void*) * 8);
-                            void** v_blocks_list = new (v_storage_block_list) void*[sizeof(std::size_t) * CHAR_BIT];
-
-                            for (int i = 0; i < m_capacity_blocks; i++)
-                            {
-                                v_blocks_list[i] = m_block_list[i];
-                            }
-
-                            for (int i = m_capacity_blocks; i < sizeof(std::size_t) * CHAR_BIT; i++)
-                            {
-                                v_blocks_list[i] = nullptr;
-                            }
-
-                            std::swap(m_block_list, v_blocks_list);
-                            (typename std::allocator_traits< Alloc >::template rebind_alloc< void* >(get_allocator()))
-                                .deallocate(reinterpret_cast< void** >(v_blocks_list), m_capacity_blocks * sizeof(void*));
-
-                            m_capacity_blocks = sizeof(std::size_t) * CHAR_BIT;
-                        }
+                        expand_block_list();
                     }
 
-                    std::size_t index_of_secondary_block_to_create = m_allocated_blocks;
-                    void* v_allocated_block_storage =
-                        (typename std::allocator_traits< Alloc >::template rebind_alloc< void* >(get_allocator())).allocate(sizeof(T) * size_of_primary_block(index_of_secondary_block_to_create));
-                    m_block_list[index_of_secondary_block_to_create] = v_allocated_block_storage;
+                    std::size_t index_of_block_to_create = m_allocated_blocks;
+                    m_block_list[index_of_block_to_create] = storage_block_allocator.allocate(size_of_block(index_of_block_to_create));
                     m_allocated_blocks++;
+                }
+
+                void shrink_block_list()
+                {
+
+                    auto storage_block_list_allocator = get_rebound_allocator<T*>();
+
+                    if (m_allocated_blocks == 0 && m_capacity_blocks != 0)
+                    {
+                        RPNX_ASSERT(m_capacity_blocks == 8 || m_capacity_blocks == sizeof(std::size_t)*CHAR_BIT);
+                        for (int i = 0; i < m_allocated_blocks; i++)
+                        {
+                            std::allocator_traits<decltype(storage_block_list_allocator)>::destroy(storage_block_list_allocator, m_block_list+i);
+                        }
+                        storage_block_list_allocator.deallocate(m_block_list, m_capacity_blocks);
+                    }
+
+                }
+
+                // Deallocates the top storage block
+                // Does not deconstruct any elements
+                void remove_block()
+                {
+                    RPNX_ASSERT(m_allocated_blocks != 0);
+
+                    auto storage_block_allocator = get_rebound_allocator<T>();
+                    storage_block_allocator.deallocate(m_block_list[m_allocated_blocks-1],size_of_block(m_allocated_blocks - 1));
+                    m_block_list[m_allocated_blocks-1] = nullptr;
+                    m_allocated_blocks--;
                 }
 
               public:
@@ -155,17 +209,34 @@ namespace rpnx
 
                 ~monoque()
                 {
-                    // TODO: implement this
-                    return;
                     while (size())
                     {
                         pop_back();
                     }
+                    shrink_to_fit();
+                }
+
+
+
+                void shrink_to_fit()
+                {
+                    while (size() < std::numeric_limits<std::size_t>::max() / 2 && ((size() * 2 <= capacity() && size() >=2) || (size()*2 < capacity())))
+                    {
+                        remove_block();
+                    }
+
+                    shrink_block_list();
                 }
 
                 void pop_back()
                 {
-                    // TODO
+                    auto storage_block_allocator = get_rebound_allocator<T>();
+                    T* v_storage_block = m_block_list[index1(size()-1)];
+                    T* v_object_to_destroy = std::launder(v_storage_block + index2(size()-1));
+
+                    m_size--;
+                    std::allocator_traits<decltype(storage_block_allocator)>::destroy(storage_block_allocator, v_object_to_destroy);
+
                 }
 
                 value_type& operator[](std::size_t n)
@@ -186,13 +257,6 @@ namespace rpnx
                     m_size++;
                     // TODO: Catch error and deallocate storage
                 }
-
-                /*
-                value_type const & operator [](std::size_t n) const
-                {
-                    return *(cbegin()+n);
-                }
-                */
 
                 inline iterator begin()
                 {
