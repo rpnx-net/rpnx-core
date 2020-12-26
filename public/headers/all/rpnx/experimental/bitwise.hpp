@@ -9,10 +9,6 @@
 #include <cstdint>
 #include <climits>
 
-#if __has_include(<bit>)
-#include <bit>
-#endif
-
 #ifdef __GNUC__
 #define RPNX_HAVE_BUILTIN_GCC_BITWISE
 #endif
@@ -42,10 +38,6 @@ namespace rpnx
         }
         return c;
     }
-
-
-
-
 
 
 #ifdef RPNX_HAVE_BUILTIN_CLANG_BITWISE
