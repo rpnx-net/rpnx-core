@@ -16,6 +16,7 @@ See rpnx-core/LICENSE.txt
 #include <memory>
 #include <climits>
 #include <limits.h>
+#include <iterator>
 
 #include "rpnx/assert.hpp"
 
@@ -26,9 +27,17 @@ namespace rpnx
         // Probably will reimplement this later more efficiently.
         inline namespace monoque_abi_v1
         {
+            template <typename T, typename Alloc>
+            class monoque_iterator;
+
+            template <typename T, typename Alloc>
+            class monoque_const_iterator;
+
             template < typename T, typename Alloc = std::allocator< T > >
             class monoque : private Alloc
             {
+                friend class monoque_iterator< T, Alloc >;
+                friend class monoque_const_iterator< T, Alloc >;
               public:
                 using value_type = T;
                 using allocator_type = Alloc;
@@ -38,39 +47,8 @@ namespace rpnx
                 using size_type = typename allocator_type::size_type;
                 using reference = typename allocator_type::reference;
 
-                class const_iterator;
-                class iterator
-                {
-                    friend class monoque< T, Alloc >;
-                    friend class const_iterator;
-
-                  private:
-                    monoque< T, Alloc >* m_at;
-                    std::size_t m_index;
-
-                  public:
-                    iterator() : m_at(nullptr), m_index(0)
-                    {
-                    }
-
-                    iterator(iterator const&) = default;
-
-                    value_type& operator*() const
-                    {
-                        RPNX_ASSERT(m_at != nullptr);
-                        RPNX_ASSERT(m_at->m_block_list[index1(m_index)] != nullptr);
-                        T* first_pointer = reinterpret_cast< value_type* >(m_at->m_block_list[index1(m_index)]);
-                        RPNX_ASSERT(first_pointer != nullptr);
-                        return std::launder(first_pointer)[index2(m_index)];
-                    }
-
-                    iterator operator+(std::size_t n) const
-                    {
-                        iterator v_copy = *this;
-                        v_copy.m_index += n;
-                        return v_copy;
-                    }
-                };
+                using iterator = monoque_iterator<T, Alloc>;
+                using const_iterator = monoque_const_iterator<T, Alloc>;
 
               private:
                 std::size_t m_size = 0;
@@ -216,6 +194,26 @@ namespace rpnx
                     shrink_to_fit();
                 }
 
+                value_type & front()
+                {
+                    return *begin();
+                }
+
+                value_type const & front() const
+                {
+                    return *cbegin();
+                }
+
+                value_type & back()
+                {
+                    return *(begin()+(size()-1));
+                }
+
+
+                value_type const & back() const
+                {
+                    return *(cbegin()+(size()-1));
+                }
 
 
                 void shrink_to_fit()
@@ -261,7 +259,7 @@ namespace rpnx
                 inline iterator begin()
                 {
                     iterator v_it;
-                    v_it.m_at = this;
+                    v_it.m_which = this;
                     v_it.m_index = 0;
                     return v_it;
                 }
@@ -269,6 +267,32 @@ namespace rpnx
                 inline iterator end()
                 {
                     iterator v_it;
+                    v_it.m_which = this;
+                    v_it.m_index = size();
+                    return v_it;
+                }
+
+                inline const_iterator begin() const
+                {
+                    return cbegin();
+                }
+
+                inline const_iterator end() const
+                {
+                    return cend();
+                }
+
+                inline const_iterator cbegin() const
+                {
+                    const_iterator v_it;
+                    v_it.m_at = this;
+                    v_it.m_index = 0;
+                    return v_it;
+                }
+
+                inline const_iterator cend() const
+                {
+                    const_iterator v_it;
                     v_it.m_at = this;
                     v_it.m_index = size();
                     return v_it;
@@ -277,6 +301,14 @@ namespace rpnx
                 std::size_t size() const
                 {
                     return m_size;
+                }
+
+                void reserve(std::size_t n)
+                {
+                    while (n > capacity())
+                    {
+                        add_block();
+                    }
                 }
 
                 std::size_t capacity() const
@@ -292,9 +324,149 @@ namespace rpnx
                 {
                     return static_cast< Alloc const& >(*this);
                 }
+
+            };
+
+            template <typename T, typename Alloc>
+            class monoque_iterator
+            {
+                friend class monoque< T, Alloc >;
+                friend class const_iterator;
+              public:
+                using value_type = typename monoque<T, Alloc>::value_type;
+                typedef std::ptrdiff_t difference_type;
+                using pointer  = value_type *;
+                using reference = value_type&;
+                using iterator_category = std::random_access_iterator_tag ;
+              private:
+                monoque< T, Alloc >* m_which;
+                std::size_t m_index;
+
+              public:
+                monoque_iterator() : m_which(nullptr), m_index(0)
+                {
+                }
+
+                monoque_iterator(monoque_iterator const&) = default;
+
+                value_type& operator*() const
+                {
+                    RPNX_ASSERT(m_which != nullptr);
+                    RPNX_ASSERT(m_index < m_which->size());
+                    auto index1 = monoque<T, Alloc>::index1(m_index);
+                    auto index2 = monoque<T, Alloc>::index2(m_index);
+                    RPNX_ASSERT((m_which->m_block_list[monoque<T, Alloc>::index1(m_index)] != nullptr));
+                    T* first_pointer = m_which->m_block_list[index1];
+                    RPNX_ASSERT(first_pointer != nullptr);
+                    return std::launder(first_pointer)[index2];
+                }
+
+                monoque_iterator& operator +=(ssize_t n)
+                {
+                    m_index += n;
+                    return *this;
+                }
+
+
+                monoque_iterator operator+(ssize_t n) const
+                {
+                    monoque_iterator v_copy = *this;
+                    v_copy.m_index += n;
+                    return v_copy;
+                }
+
+                monoque_iterator operator-(ssize_t n) const
+                {
+                    monoque_iterator v_copy = *this;
+                    v_copy.m_index -= n;
+                    return v_copy;
+                }
+
+                inline bool operator!=(monoque_iterator const & other) const
+                {
+                    RPNX_ASSERT(m_which == other.m_which);
+                    return m_index != other.m_index;
+                }
+
+                inline bool operator==(monoque_iterator const & other) const
+                {
+                    RPNX_ASSERT(m_which == other.m_which);
+                    return m_index == other.m_index;
+                }
+
+
+                inline bool operator<(monoque_iterator const & other) const
+                {
+                    RPNX_ASSERT(m_which == other.m_which);
+                    return m_index < other.m_index;
+                }
+
+                inline bool operator<=(monoque_iterator const & other) const
+                {
+                    RPNX_ASSERT(m_which == other.m_which);
+                    return m_index <= other.m_index;
+                }
+
+                inline bool operator>=(monoque_iterator const & other) const
+                {
+                    RPNX_ASSERT(m_which == other.m_which);
+                    return m_index >= other.m_index;
+                }
+
+                inline bool operator>(monoque_iterator const & other) const
+                {
+                    RPNX_ASSERT(m_which == other.m_which);
+                    return m_index > other.m_index;
+                }
+
+                monoque_iterator operator++(int)
+                {
+                    monoque_iterator copy = *this;
+                    m_index++;
+                    return copy;
+                }
+
+
+                monoque_iterator& operator++()
+                {
+                    m_index++;
+                    return *this;
+                }
+
+                monoque_iterator operator--(int)
+                {
+                    monoque_iterator copy = *this;
+                    m_index--;
+                    return copy;
+                }
+
+
+                monoque_iterator& operator--()
+                {
+                    m_index--;
+                    return *this;
+                }
+
+                difference_type operator-(monoque_iterator const & other) const
+
+                {
+                    return m_index - other.m_index;
+                }
+
             };
         }
     }
+}
+template <typename T, typename Alloc>
+auto operator+(ssize_t lhs, typename rpnx::experimental::monoque_iterator<T,Alloc> const & rhs)
+{
+    return rhs+lhs;
+}
+
+template <typename T, typename Alloc>
+auto operator-(ssize_t lhs, typename rpnx::experimental::monoque_iterator<T,Alloc> const & rhs)
+{
+    return rhs-lhs;
 }
 
 #endif // RPNXCORE_MONOQUE_HPP
