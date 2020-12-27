@@ -1,6 +1,6 @@
 # rpnx-core
 
-A C++ library that provides cross platform C++ OS abstractions, data structures, and algorithms.
+A work in progress C++ library that provides cross platform C++ OS abstractions, data structures, and algorithms.
 
 Supported OS:
 
