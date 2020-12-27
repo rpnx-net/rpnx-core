@@ -189,7 +189,7 @@ namespace rpnx
                 {
                 }
 
-                monoque(Alloc const& ac) : Alloc(ac)
+                monoque(Alloc const& ac) noexcept : Alloc(ac)
                 {
                 }
 
