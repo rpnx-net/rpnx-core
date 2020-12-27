@@ -2018,10 +2018,13 @@ namespace rpnx
             value.clear();
             std::size_t size = 0;
             it = synchronous_iterator_serial_traits< uintany, decltype(it) >::serialize(size, it);
-            // TODO: This is not efficient with all types of iterators.
-            // May not even be legal in some cases.
             value.reserve(size);
-            std::copy_n(it, size, std::back_inserter(value));
+            //auto outit = std::back_inserter(value);
+            for (int i = 0; i < size; i++)
+            {
+                value.push_back((char)(*it++));
+            }
+            //it = std::copy_n(it, size, );
             std::advance(it, size);
             return it;
         }
