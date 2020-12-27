@@ -45,10 +45,10 @@ int main()
     }
 
 
-     auto const & const_m = m;
+    auto const & const_m = m;
 
-     auto copy = m;
-    for (std::string const & x : const_m)
+    auto copy = m;
+    for (std::string const & x : copy)
     {
         std::cout << "line "<< c++ << " " << x << std::endl;
     }

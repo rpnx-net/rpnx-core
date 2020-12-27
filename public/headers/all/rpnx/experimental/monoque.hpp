@@ -338,6 +338,23 @@ namespace rpnx
                     }
                 }
 
+                void resize(std::size_t n)
+                {
+                    while (n < size())
+                    {
+                        emplace_back();
+                    }
+                    while (n > size())
+                    {
+                        pop_back();
+                    }
+                }
+
+                void clear() noexcept
+                {
+                    resize(0);
+                }
+
                 std::size_t capacity() const noexcept
                 {
                     // 0, [2, 4, 8, 16, 32, 64, 128, 256], 512, 1024 ...
