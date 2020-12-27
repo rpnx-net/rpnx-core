@@ -9,6 +9,17 @@
 #include <cstdint>
 #include <climits>
 
+#include "rpnx/experimental/cpuarchinfo.hpp"
+
+#ifdef _MSC_VER
+// When using MSC we should have access to #include <intrin.h>
+
+#if __has_include(<intrin.h>)
+#define RPNX_HAVE_BUILTIN_MSC_INTRINSICS
+#endif
+
+#endif
+
 #ifdef __GNUC__
 #define RPNX_HAVE_BUILTIN_GCC_BITWISE
 #endif
@@ -40,7 +51,16 @@ namespace rpnx
     }
 
 
-
+    template <typename T>
+    inline int bit_reverse(T t)
+    {
+        T result = 0;
+        for (int i = 0; i < sizeof(T)*CHAR_BIT; i++)
+        {
+            if ((T(1) << i) & t) result |= (T(1) << (sizeof(T)*CHAR_BIT - i - 1) );
+        }
+        return result;
+    }
 
 #ifdef RPNX_HAVE_BUILTIN_CLANG_BITWISE
     // hello
@@ -96,17 +116,6 @@ inline int bit_reverse(unsigned long long x)
 
 #endif
 
-#else
-    template <typename T>
-    inline int bit_reverse(T t)
-    {
-        T result = 0;
-        for (int i = 0; i < sizeof(T)*CHAR_BIT; i++)
-        {
-            if ((T(1) << i) & t) result |= (T(1) << (sizeof(T)*CHAR_BIT - i - 1) );
-        }
-        return result;
-    }
 #endif
 
 #ifdef RPNX_HAVE_BUILTIN_GCC_BITWISE
@@ -128,6 +137,26 @@ inline int bit_reverse(unsigned long long x)
         return __builtin_clzll(x);
     }
 #endif
+
+#ifdef RPNX_HAVE_BUILTIN_MSC_INTRINSICS
+#if RPNX_CPU_ARCH == RPNX_CPU_ARCH_X64 || RPNX_CPU_ARCH == RPNX_CPU_ARCH_X86 || RPNX_CPU_ARCH == RPNX_CPU_ARCH_ARM || RPNX_CPU_ARCH == RPNX_CPU_ARCH_ARM64
+#if false
+    // thid doesn't work because _BitScanReverse isn't constexpr
+    template <>
+    inline constexpr int countl_zero<unsigned int>(unsigned int t)
+    {
+        unsigned long index = 32;
+        if (! _BitScanReverse( &index, t) ) return 32;
+        return index;
+    }
+#endif
+#endif
+
+
+
+#endif
+
+
 
     template <typename T>
     inline int countl_one(T v) noexcept
