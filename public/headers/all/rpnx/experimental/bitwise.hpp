@@ -30,7 +30,7 @@ namespace rpnx
         int c = 0;
         for (int i = sizeof(T)*CHAR_BIT; i != 0; i--)
         {
-            if ( ((1 << (i-1)) & v))
+            if ( ((T(1) << (i-1)) & v))
             {
                 break;
             }

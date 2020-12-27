@@ -74,7 +74,9 @@ namespace rpnx
                 {
                     if (at <= 1)
                         return 0;
-                    std::size_t a = sizeof(at) * CHAR_BIT - countl_zero(at);
+                    auto v1 = sizeof(at) * CHAR_BIT;
+                    auto v2 = countl_zero(at);
+                    std::size_t a = v1 - v2;
                     return a - 1;
                 }
 
@@ -276,9 +278,13 @@ namespace rpnx
                     {
                         add_block();
                     }
-                    void* v_storage_block = m_block_list[index1(size())];
-                    void* v_storage_location = (void*)((T*)v_storage_block + index2(size()));
-                    new (v_storage_location) T(std::forward< Ts >(ts)...);
+                    RPNX_ASSERT(capacity() > size());
+                    RPNX_ASSERT(index1(2) == 1);
+                    auto i1 = index1(size());
+                    auto i2 = index2(size());
+                    T* v_storage_block = m_block_list[i1];
+                    T* v_object_location = v_storage_block + i2;
+                    new (v_object_location) T(std::forward< Ts >(ts)...);
                     m_size++;
                     // TODO: Catch error and deallocate storage
                 }
