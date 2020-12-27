@@ -9,10 +9,10 @@ Supported OS:
 * Linux
 * Android (NDK)
 * FreeBSD
-* Solaris
 
 Not currently supported OS:
 
+* Solaris
 * iOS
 * iPadOS
 * VxWorks
@@ -33,4 +33,4 @@ Not currently supported compilers:
 * MinGW-w64
 * ICC
 
-Unsupported compilers and OS will be supported when possible, so long as they support recent C++ versions.
+Unsupported compilers and OS will be supported when possible, so long as they support recent C++ versions. If you want to use one file an issue and I will take a look at it.
