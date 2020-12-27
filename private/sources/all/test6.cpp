@@ -44,5 +44,12 @@ int main()
         std::cout << "line "<< c++ << " " << x << std::endl;
     }
 
+
+     auto const & const_m = m;
+    for (std::string const & x : const_m)
+    {
+        std::cout << "line "<< c++ << " " << x << std::endl;
+    }
+
     return 0;
 }
