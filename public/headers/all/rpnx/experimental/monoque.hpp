@@ -38,6 +38,13 @@ namespace rpnx
             {
                 friend class monoque_iterator< T, Alloc >;
                 friend class monoque_const_iterator< T, Alloc >;
+
+                static_assert(noexcept(Alloc()));
+
+                static_assert(std::is_same_v<typename std::allocator_traits<Alloc>::size_type, std::size_t>, "Not implemented");
+                static_assert(std::is_same_v<typename std::allocator_traits<Alloc>::pointer, T*>, "Not implemented");
+                static_assert(std::is_same_v<typename std::allocator_traits<Alloc>::difference_type, std::ptrdiff_t>, "Not implemented");
+
               public:
                 using value_type = T;
                 using allocator_type = Alloc;
@@ -57,8 +64,9 @@ namespace rpnx
                 T** m_block_list = nullptr;
 
                 template <typename T2>
-                auto get_rebound_allocator() const
+                auto get_rebound_allocator() const noexcept
                 {
+                    static_assert(noexcept(typename std::allocator_traits< Alloc >::template rebind_alloc< T2 >(get_allocator())));
                     return typename std::allocator_traits< Alloc >::template rebind_alloc< T2 >(get_allocator());
                 }
 
@@ -166,7 +174,7 @@ namespace rpnx
 
                 // Deallocates the top storage block
                 // Does not deconstruct any elements
-                void remove_block()
+                void remove_block() noexcept
                 {
                     RPNX_ASSERT(m_allocated_blocks != 0);
 
@@ -177,7 +185,7 @@ namespace rpnx
                 }
 
               public:
-                monoque()
+                monoque() noexcept
                 {
                 }
 
@@ -192,6 +200,19 @@ namespace rpnx
                         pop_back();
                     }
                     shrink_to_fit();
+                }
+
+                monoque(monoque<T, Alloc> const & other)
+                    : Alloc(other.get_allocator())
+                {
+                    for (auto const & x : other)
+                        emplace_back(x);
+                }
+
+                monoque(monoque<T, Alloc> && other)
+                : Alloc(other.get_allocator())
+                {
+                    swap(*this, other);
                 }
 
                 value_type & front()
@@ -226,8 +247,14 @@ namespace rpnx
                     shrink_block_list();
                 }
 
-                void pop_back()
+                bool empty() const noexcept
                 {
+                    return size() == 0;
+                }
+
+                void pop_back() noexcept
+                {
+                    RPNX_ASSERT(size() != 0);
                     auto storage_block_allocator = get_rebound_allocator<T>();
                     T* v_storage_block = m_block_list[index1(size()-1)];
                     T* v_object_to_destroy = std::launder(v_storage_block + index2(size()-1));
@@ -256,7 +283,7 @@ namespace rpnx
                     // TODO: Catch error and deallocate storage
                 }
 
-                inline iterator begin()
+                inline iterator begin() noexcept
                 {
                     iterator v_it;
                     v_it.m_which = this;
@@ -264,7 +291,7 @@ namespace rpnx
                     return v_it;
                 }
 
-                inline iterator end()
+                inline iterator end() noexcept
                 {
                     iterator v_it;
                     v_it.m_which = this;
@@ -272,17 +299,17 @@ namespace rpnx
                     return v_it;
                 }
 
-                inline const_iterator begin() const
+                inline const_iterator begin() const noexcept
                 {
                     return cbegin();
                 }
 
-                inline const_iterator end() const
+                inline const_iterator end() const noexcept
                 {
                     return cend();
                 }
 
-                inline const_iterator cbegin() const
+                inline const_iterator cbegin() const noexcept
                 {
                     const_iterator v_it;
                     v_it.m_which = this;
@@ -290,7 +317,7 @@ namespace rpnx
                     return v_it;
                 }
 
-                inline const_iterator cend() const
+                inline const_iterator cend() const noexcept
                 {
                     const_iterator v_it;
                     v_it.m_which = this;
@@ -298,7 +325,7 @@ namespace rpnx
                     return v_it;
                 }
 
-                std::size_t size() const
+                std::size_t size() const noexcept
                 {
                     return m_size;
                 }
@@ -311,7 +338,7 @@ namespace rpnx
                     }
                 }
 
-                std::size_t capacity() const
+                std::size_t capacity() const noexcept
                 {
                     // 0, [2, 4, 8, 16, 32, 64, 128, 256], 512, 1024 ...
                     if (m_allocated_blocks == 0)
@@ -320,9 +347,17 @@ namespace rpnx
                         return std::size_t(1) << m_allocated_blocks;
                 }
 
-                Alloc get_allocator() const
+                Alloc get_allocator() const noexcept
                 {
                     return static_cast< Alloc const& >(*this);
+                }
+
+                void swap(monoque<T, Alloc> & other) noexcept
+                {
+                    std::swap(m_block_list, other.m_block_list);
+                    std::swap(m_capacity_blocks, other.m_capacity_blocks);
+                    std::swap(m_allocated_blocks, other.m_allocated_blocks);
+                    std::swap(m_size, other.m_size);
                 }
 
             };
@@ -343,13 +378,14 @@ namespace rpnx
                 std::size_t m_index;
 
               public:
-                monoque_iterator() : m_which(nullptr), m_index(0)
+                monoque_iterator() noexcept
+                    : m_which(nullptr), m_index(0)
                 {
                 }
 
                 monoque_iterator(monoque_iterator<T, Alloc> const&) = default;
 
-                monoque_iterator<T, Alloc>& operator =(monoque_iterator<T, Alloc> const & other)
+                monoque_iterator<T, Alloc>& operator =(monoque_iterator<T, Alloc> const & other) noexcept
                 {
                     m_which = other.m_which;
                     m_index = other.m_index;
@@ -360,9 +396,10 @@ namespace rpnx
                 {
                     RPNX_ASSERT(m_which != nullptr);
                     RPNX_ASSERT(m_index < m_which->size());
+                    RPNX_ASSERT(m_which->m_block_list != nullptr);
                     auto index1 = monoque<T, Alloc>::index1(m_index);
                     auto index2 = monoque<T, Alloc>::index2(m_index);
-                    RPNX_ASSERT((m_which->m_block_list[monoque<T, Alloc>::index1(m_index)] != nullptr));
+
                     T* first_pointer = m_which->m_block_list[index1];
                     RPNX_ASSERT(first_pointer != nullptr);
                     return std::launder(first_pointer)[index2];
@@ -370,13 +407,13 @@ namespace rpnx
 
 
 
-                monoque_iterator<T, Alloc> & operator +=(difference_type n)
+                inline monoque_iterator<T, Alloc> & operator +=(difference_type n) noexcept
                 {
                     m_index += n;
                     return *this;
                 }
 
-                monoque_iterator<T, Alloc> & operator -=(difference_type n)
+                inline monoque_iterator<T, Alloc> & operator -=(difference_type n) noexcept
                 {
                     m_index += n;
                     return *this;
@@ -384,58 +421,58 @@ namespace rpnx
 
 
 
-                monoque_iterator<T, Alloc> operator+(difference_type n) const
+                inline monoque_iterator<T, Alloc> operator+(difference_type n) const noexcept
                 {
                     monoque_iterator<T, Alloc> v_copy = *this;
                     v_copy.m_index += n;
                     return v_copy;
                 }
 
-                monoque_iterator<T, Alloc> operator-(difference_type n) const
+                inline monoque_iterator<T, Alloc> operator-(difference_type n) const noexcept
                 {
                     monoque_iterator<T, Alloc> v_copy = *this;
                     v_copy.m_index -= n;
                     return v_copy;
                 }
 
-                inline bool operator!=(monoque_iterator<T, Alloc> const & other) const
+                inline bool operator!=(monoque_iterator<T, Alloc> const & other) const noexcept
                 {
                     RPNX_ASSERT(m_which == other.m_which);
                     return m_index != other.m_index;
                 }
 
-                inline bool operator==(monoque_iterator<T, Alloc> const & other) const
+                inline bool operator==(monoque_iterator<T, Alloc> const & other) const noexcept
                 {
                     RPNX_ASSERT(m_which == other.m_which);
                     return m_index == other.m_index;
                 }
 
 
-                inline bool operator<(monoque_iterator<T, Alloc> const & other) const
+                inline bool operator<(monoque_iterator<T, Alloc> const & other) const noexcept
                 {
                     RPNX_ASSERT(m_which == other.m_which);
                     return m_index < other.m_index;
                 }
 
-                inline bool operator<=(monoque_iterator<T, Alloc> const & other) const
+                inline bool operator<=(monoque_iterator<T, Alloc> const & other) const noexcept
                 {
                     RPNX_ASSERT(m_which == other.m_which);
                     return m_index <= other.m_index;
                 }
 
-                inline bool operator>=(monoque_iterator<T, Alloc> const & other) const
+                inline bool operator>=(monoque_iterator<T, Alloc> const & other) const noexcept
                 {
                     RPNX_ASSERT(m_which == other.m_which);
                     return m_index >= other.m_index;
                 }
 
-                inline bool operator>(monoque_iterator<T, Alloc> const & other) const
+                inline bool operator>(monoque_iterator<T, Alloc> const & other) const noexcept
                 {
                     RPNX_ASSERT(m_which == other.m_which);
                     return m_index > other.m_index;
                 }
 
-                monoque_iterator<T, Alloc> operator++(int)
+                inline monoque_iterator<T, Alloc> operator++(int) noexcept
                 {
                     monoque_iterator<T, Alloc> copy = *this;
                     m_index++;
@@ -443,13 +480,13 @@ namespace rpnx
                 }
 
 
-                monoque_iterator<T, Alloc>& operator++()
+                inline monoque_iterator<T, Alloc>& operator++() noexcept
                 {
                     m_index++;
                     return *this;
                 }
 
-                monoque_iterator<T, Alloc> operator--(int)
+                inline monoque_iterator<T, Alloc> operator--(int) noexcept
                 {
                     monoque_iterator<T, Alloc> copy = *this;
                     m_index--;
@@ -457,19 +494,18 @@ namespace rpnx
                 }
 
 
-                monoque_iterator<T, Alloc>& operator--()
+                inline monoque_iterator<T, Alloc>& operator--() noexcept
                 {
                     m_index--;
                     return *this;
                 }
 
-                difference_type operator-(monoque_iterator<T, Alloc> const & other) const
-
+                inline difference_type operator-(monoque_iterator<T, Alloc> const & other) const noexcept
                 {
                     return m_index - other.m_index;
                 }
 
-                value_type & operator[](difference_type dif) const
+                inline value_type & operator[](difference_type dif) const noexcept
                 {
                     return *(*this + dif);
                 }
@@ -492,27 +528,25 @@ namespace rpnx
                 std::size_t m_index;
 
               public:
-                monoque_const_iterator() : m_which(nullptr), m_index(0)
+                inline monoque_const_iterator() : m_which(nullptr), m_index(0)
                 {
                 }
 
                 monoque_const_iterator(monoque_const_iterator<T, Alloc> const&) = default;
 
-                monoque_const_iterator(monoque_iterator<T, Alloc> const & other)
+                inline monoque_const_iterator(monoque_iterator<T, Alloc> const & other)
                     : m_index(other.m_index), m_which(other.m_which)
                 {
-
-
                 }
 
-                monoque_const_iterator<T, Alloc>& operator =(monoque_const_iterator<T, Alloc> const & other)
+                inline monoque_const_iterator<T, Alloc>& operator =(monoque_const_iterator<T, Alloc> const & other)
                 {
                     m_which = other.m_which;
                     m_index = other.m_index;
                     return *this;
                 }
 
-                value_type& operator*() const
+                inline value_type& operator*() const
                 {
                     RPNX_ASSERT(m_which != nullptr);
                     RPNX_ASSERT(m_index < m_which->size());
@@ -526,28 +560,26 @@ namespace rpnx
 
 
 
-                monoque_const_iterator<T, Alloc> & operator +=(difference_type n)
+                inline monoque_const_iterator<T, Alloc> & operator +=(difference_type n)
                 {
                     m_index += n;
                     return *this;
                 }
 
-                monoque_const_iterator<T, Alloc> & operator -=(difference_type n)
+                inline monoque_const_iterator<T, Alloc> & operator -=(difference_type n)
                 {
                     m_index += n;
                     return *this;
                 }
 
-
-
-                monoque_const_iterator<T, Alloc> operator+(difference_type n) const
+                inline monoque_const_iterator<T, Alloc> operator+(difference_type n) const
                 {
                     monoque_const_iterator<T, Alloc> v_copy = *this;
                     v_copy.m_index += n;
                     return v_copy;
                 }
 
-                monoque_const_iterator<T, Alloc> operator-(difference_type n) const
+                inline monoque_const_iterator<T, Alloc> operator-(difference_type n) const
                 {
                     monoque_const_iterator<T, Alloc> v_copy = *this;
                     v_copy.m_index -= n;
@@ -591,7 +623,7 @@ namespace rpnx
                     return m_index > other.m_index;
                 }
 
-                monoque_const_iterator<T, Alloc> operator++(int)
+                inline monoque_const_iterator<T, Alloc> operator++(int)
                 {
                     monoque_const_iterator<T, Alloc> copy = *this;
                     m_index++;
@@ -599,13 +631,13 @@ namespace rpnx
                 }
 
 
-                monoque_const_iterator<T, Alloc>& operator++()
+                inline monoque_const_iterator<T, Alloc>& operator++()
                 {
                     m_index++;
                     return *this;
                 }
 
-                monoque_const_iterator<T, Alloc> operator--(int)
+                inline monoque_const_iterator<T, Alloc> operator--(int)
                 {
                     monoque_const_iterator<T, Alloc> copy = *this;
                     m_index--;
@@ -613,19 +645,18 @@ namespace rpnx
                 }
 
 
-                monoque_const_iterator<T, Alloc>& operator--()
+                inline monoque_const_iterator<T, Alloc>& operator--()
                 {
                     m_index--;
                     return *this;
                 }
 
-                difference_type operator-(monoque_const_iterator<T, Alloc> const & other) const
-
+                inline difference_type operator-(monoque_const_iterator<T, Alloc> const & other) const
                 {
                     return m_index - other.m_index;
                 }
 
-                value_type & operator[](difference_type dif) const
+                inline value_type & operator[](difference_type dif) const
                 {
                     return *(*this + dif);
                 }
