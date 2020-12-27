@@ -40,6 +40,8 @@ namespace rpnx
     }
 
 
+
+
 #ifdef RPNX_HAVE_BUILTIN_CLANG_BITWISE
     // hello
 #if UINT_MAX == 65535ull
@@ -142,6 +144,10 @@ inline int bit_reverse(unsigned long long x)
     static_assert(bit_floor(std::uint32_t(3)) == 2);
     static_assert(bit_floor(std::uint32_t(2)) == 2);
     static_assert(bit_floor(std::uint32_t(9)) == 8);
+
+    static_assert(countl_zero(std::uint16_t(1)) == 15);
+    static_assert(countl_zero(std::uint32_t(1)) == 31);
+    static_assert(countl_zero(std::uint64_t(1)) == 63);
 
 }
 
