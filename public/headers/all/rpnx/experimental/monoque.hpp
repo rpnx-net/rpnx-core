@@ -679,4 +679,16 @@ auto operator-(std::ptrdiff_t lhs, typename rpnx::experimental::monoque_iterator
     return rhs-lhs;
 }
 
+template <typename T, typename Alloc>
+auto operator+(std::ptrdiff_t lhs, typename rpnx::experimental::monoque_const_iterator<T,Alloc> const & rhs)
+{
+    return rhs+lhs;
+}
+
+template <typename T, typename Alloc>
+auto operator-(std::ptrdiff_t lhs, typename rpnx::experimental::monoque_const_iterator<T,Alloc> const & rhs)
+{
+    return rhs-lhs;
+}
+
 #endif // RPNXCORE_MONOQUE_HPP
