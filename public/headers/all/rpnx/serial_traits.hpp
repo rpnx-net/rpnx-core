@@ -2024,8 +2024,6 @@ namespace rpnx
             {
                 value.push_back((char)(*it++));
             }
-            //it = std::copy_n(it, size, );
-            std::advance(it, size);
             return it;
         }
     };
