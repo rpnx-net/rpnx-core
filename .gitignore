@@ -12,3 +12,4 @@
 CMakeLists.txt.user
 CMakeSettings.json
 .vs
+.DS_Store
