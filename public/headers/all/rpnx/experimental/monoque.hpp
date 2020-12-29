@@ -187,13 +187,25 @@ namespace rpnx
                 }
 
               public:
-                monoque() noexcept
+                monoque() noexcept(noexcept(Alloc()))
                 {
                 }
 
-                monoque(Alloc const& ac) noexcept : Alloc(ac)
+                explicit monoque(Alloc const& ac) noexcept(noexcept(Alloc())) : Alloc(ac)
                 {
                 }
+
+                // TODO explicit monoque( size_type count, const T & value, Alloc const & alloc = Allocator());
+
+                // TODO explicit monoque( size_type count, const Alloc & alloc = Alloc())
+
+                // TODO template <typename It> monoque(It begin, It end, const Alloc & alloc = Alloc())
+
+                // TODO monoque(std::initializer_list<T> ilist)
+
+                // TODO clear
+                // todo insert
+                // TODO erase
 
                 ~monoque()
                 {
@@ -216,6 +228,10 @@ namespace rpnx
                 {
                     swap(*this, other);
                 }
+
+                // TODO monoque<A, Alloc> & operator=(monoque const & other);
+                // TODO monoque<T, Alloc> & operator=(monoque && other);
+                // TODO monoque<T, Alloc> & operator=(std::initializer_list<T> ilist);
 
                 value_type & front()
                 {
