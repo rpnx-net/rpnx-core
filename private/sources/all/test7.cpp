@@ -1,4 +1,4 @@
-#include "rpnx/legacy/avl_tree.hpp"
+#include "rpnx/experimental/avl_tree.hpp"
 
 
 int main()
@@ -20,10 +20,10 @@ int main()
   c.insert(10, 10);
   
   rpnx::avl_tree<int, int>::join(a, b, c);
-  
+
   
 
-  std::cout << c.stringify() << std::endl << std::endl;
+  std::cout << "c=" << c.stringify() << std::endl << std::endl;
   
   rpnx::avl_tree<int, int>::split(26, c, b);
   std::cout << c.stringify() << std::endl;
