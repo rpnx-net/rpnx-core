@@ -23,11 +23,11 @@
 
 #ifdef __GNUC__
 #define RPNX_HAVE_BUILTIN_GCC_BITWISE
-#endif
+#else
 #ifdef __clang__
 #define RPNX_HAVE_BUILTIN_GCC_BITWISE
 #endif
-
+#endif
 #ifdef __clang__
 #define RPNX_HAVE_BUILTIN_CLANG_BITWISE
 #endif
