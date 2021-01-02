@@ -1,7 +1,8 @@
-//
-// Created by rnicholl on 12/24/20.
-//
-
+/*
+ * rpnx bitwise functions
+ * C++20 includes <bit>, but C++20 isn't available much yet.
+ * Plus, there are a lot of omissions from <bit> which I'd like to implement.
+ */
 #ifndef RPNXCORE_BITWISE_HPP
 #define RPNXCORE_BITWISE_HPP
 
@@ -22,11 +23,11 @@
 
 #ifdef __GNUC__
 #define RPNX_HAVE_BUILTIN_GCC_BITWISE
-#endif
+#else
 #ifdef __clang__
 #define RPNX_HAVE_BUILTIN_GCC_BITWISE
 #endif
-
+#endif
 #ifdef __clang__
 #define RPNX_HAVE_BUILTIN_CLANG_BITWISE
 #endif

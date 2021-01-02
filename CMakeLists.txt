@@ -10,7 +10,7 @@ if (HAVE_BUILTIN_CLZ)
   message("HAVE_BUILTIN_CLZ")
 endif()
 
-add_library(rpnx-core public/headers/all/rpnx/experimental/scoped_action.hpp)
+add_library(rpnx-core)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
 
 target_sources(rpnx-core PRIVATE
@@ -34,6 +34,8 @@ list ( APPEND RPNX_CORE_HEADERS
         public/headers/all/rpnx/experimental/monoque.hpp
         public/headers/all/rpnx/experimental/bitwise.hpp
         public/headers/all/rpnx/experimental/cpuarchinfo.hpp
+        public/headers/all/rpnx/experimental/scoped_action.hpp
+        public/headers/all/rpnx/experimental/avl_tree.hpp
     )
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
@@ -110,6 +112,10 @@ set_target_properties(rpnx-core-test6 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-test6 PRIVATE private/sources/all/test6.cpp)
 target_link_libraries(rpnx-core-test6 rpnx-core)
 
+add_executable(rpnx-core-test7)
+set_target_properties(rpnx-core-test7 PROPERTIES CXX_STANDARD 17)
+target_sources(rpnx-core-test7 PRIVATE private/sources/all/test7.cpp)
+target_link_libraries(rpnx-core-test7 rpnx-core)
 
 add_executable(rpnx-core-benchmark1)
 set_target_properties(rpnx-core-benchmark1 PROPERTIES CXX_STANDARD 17)
