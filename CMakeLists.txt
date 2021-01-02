@@ -4,6 +4,12 @@ project(RPNXCore)
 
 find_package(Threads REQUIRED)
 
+include(CheckSymbolExists)
+check_symbol_exists(__builtin_clz "<cstddef>" HAVE_BUILTIN_CLZ)
+if (HAVE_BUILTIN_CLZ)
+  message("HAVE_BUILTIN_CLZ")
+endif()
+
 add_library(rpnx-core public/headers/all/rpnx/experimental/scoped_action.hpp)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
 
