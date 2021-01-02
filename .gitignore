@@ -14,3 +14,5 @@ CMakeSettings.json
 .vs
 .DS_Store
 /cmake-build-*
+.DS_Store
+/cmake-build-*

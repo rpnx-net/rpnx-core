@@ -4,8 +4,8 @@ project(RPNXCore)
 
 find_package(Threads REQUIRED)
 
-include(CheckSymbolExists)
-check_symbol_exists(__builtin_clz "<cstddef>" HAVE_BUILTIN_CLZ)
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("int main() { return __builtin_clz(1); }" HAVE_BUILTIN_CLZ)
 if (HAVE_BUILTIN_CLZ)
   message("HAVE_BUILTIN_CLZ")
 endif()
