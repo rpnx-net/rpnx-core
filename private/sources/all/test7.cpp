@@ -1,9 +1,9 @@
 #include "rpnx/experimental/avl_tree.hpp"
-
+#include <random>
 
 int main()
 {
-  rpnx::avl_tree< int, int > a, b, c, d;
+  rpnx::experimental::avl_tree< int, int > a, b, c, d;
 
   std::mt19937 r;
 
