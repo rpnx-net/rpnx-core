@@ -1,6 +1,8 @@
 #ifndef RPNXCORE_NETWORK_HPP
 #define RPNXCORE_NETWORK_HPP
 
+#include <future>
+
 #ifdef _WIN32
 #include <WinSock2.h>
 #endif
@@ -136,13 +138,23 @@ namespace rpnx
         using native_socket_type = int;
 #endif
 
-        class async_service;
+
 
         class ip4_udp_socket;
         class ip4_udp_endpoint;
         class ip4_tcp_acceptor;
         class ip4_tcp_connection;
         class ip4_tcp_endpoint;
+
+        class ip6_udp_socket;
+        class ip6_udp_endpoint;
+        class ip6_tcp_acceptor;
+        class ip6_tcp_connection;
+        class ip6_tcp_endpoint;
+
+        class async_service;
+
+        class async_ip4_udp_socket;
 
         template < typename It >
         void net_send(ip4_udp_socket& socket, ip4_udp_endpoint const& to, It input_begin, It input_end);
@@ -157,6 +169,7 @@ namespace rpnx
         auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& from, It output_begin) -> It;
 
         void net_bind(ip4_udp_socket& socket, ip4_udp_endpoint const& bind);
+        void net_bind(async_ip4_udp_socket& socket, ip4_udp_endpoint const& bind);
 
         void net_listen(ip4_tcp_acceptor& socket, ip4_tcp_endpoint const& addr);
 
@@ -967,6 +980,54 @@ namespace rpnx
             std::function< void() > callback;
         };
 
+        class async_ip4_udp_socket
+        {
+            friend void net_bind(async_ip4_udp_socket &, ip4_udp_endpoint const &);
+          private:
+#ifdef _WIN32
+            SOCKET m_socket;
+#endif
+
+          public:
+#ifdef _WIN32
+            async_ip4_udp_socket()
+                : m_socket(INVALID_SOCKET)
+            {
+
+
+            }
+            bool is_open() const
+            {
+                return m_socket != -1;
+            }
+
+            void close()
+            {
+                if (is_open()) return;
+
+                ::closesocket(m_socket);
+
+                m_socket = -1;
+            }
+
+            auto native() const
+            {
+                return m_socket;
+            }
+
+            void open()
+            {
+                if (is_open()) close();
+                m_socket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+                if (m_socket == -1)
+                {
+                    throw std::runtime_error("WSA SOCKET");
+                }
+            }
+
+#endif
+        };
+
         class async_service
         {
 #ifdef _WIN32
@@ -1021,6 +1082,38 @@ namespace rpnx
             }
 #endif
         };
+
+        inline void net_bind(async_ip4_udp_socket& socket, ip4_udp_endpoint const& bind_addr)
+        {
+#ifdef _WIN32
+            detail::wsa_intializer::singleton();
+#endif
+            sockaddr_in socket_addr = bind_addr.native();
+            auto result = ::bind(socket.native(), (const sockaddr*)&socket_addr, sizeof(socket_addr));
+            if (result == -1)
+            {
+                throw network_error("upd_ip4_socket::bind()", get_os_network_error_code());
+            }
+            return;
+        }
+
+        // "asynchronously" binds a socket.
+        // Note: Synchronous sockets that are bound asynchronously, actually bind synchronously in a different thread.
+        inline std::future<void> net_bind_async(ip4_udp_socket& socket, ip4_udp_endpoint const& bind_addr)
+        {
+            return std::async([&socket, bind_addr] {
+#ifdef _WIN32
+               detail::wsa_intializer::singleton();
+#endif
+               sockaddr_in socket_addr = bind_addr.native();
+               auto result = ::bind(socket.native(), (const sockaddr*)&socket_addr, sizeof(socket_addr));
+               if (result == -1)
+               {
+                   throw network_error("upd_ip4_socket::bind()", get_os_network_error_code());
+               }
+               return;
+            });
+        }
     } // namespace experimental
 } // namespace rpnx
 
