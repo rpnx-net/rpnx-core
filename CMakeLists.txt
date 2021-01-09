@@ -5,10 +5,9 @@ project(RPNXCore)
 find_package(Threads REQUIRED)
 
 include(CheckCXXSourceCompiles)
-check_cxx_source_compiles("int main() { return __builtin_clz(1); }" HAVE_BUILTIN_CLZ)
-if (HAVE_BUILTIN_CLZ)
-  message("HAVE_BUILTIN_CLZ")
-endif()
+check_cxx_source_compiles("int main() { return __builtin_clz(1); }" RPNX_HAVE_BUILTIN_CLZ)
+check_cxx_source_compiles("#include <intrin.h>\nint main() { unsigned long index = 0; _BitScanReverse(&index, 1); }" RPNX_HAVE_BITSCANREVERSE)
+check_cxx_source_compiles("#include <intrin.h>\nint main() { unsigned long index = 0; _BitScanReverse64(&index, 1ull); }" RPNX_HAVE_BITSCANREVERSE64)
 
 add_library(rpnx-core)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
