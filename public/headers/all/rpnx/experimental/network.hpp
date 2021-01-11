@@ -1018,7 +1018,7 @@ namespace rpnx
             void open()
             {
                 if (is_open()) close();
-                m_socket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+                m_socket = WSASocketW(AF_INET, SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, WSA_FLAG_OVERLAPPED);
                 if (m_socket == -1)
                 {
                     throw std::runtime_error("WSA SOCKET");
