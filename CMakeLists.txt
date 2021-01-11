@@ -116,6 +116,11 @@ target_link_libraries(rpnx-core-test6 rpnx-core)
 #target_sources(rpnx-core-test7 PRIVATE private/sources/all/test7.cpp)
 #target_link_libraries(rpnx-core-test7 rpnx-core)
 
+add_executable(rpnx-core-test8)
+set_target_properties(rpnx-core-test8 PROPERTIES CXX_STANDARD 17)
+target_sources(rpnx-core-test8 PRIVATE private/sources/all/test8.cpp)
+target_link_libraries(rpnx-core-test8 rpnx-core)
+
 add_executable(rpnx-core-benchmark1)
 set_target_properties(rpnx-core-benchmark1 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-benchmark1 PRIVATE private/sources/all/bm1.cpp)
