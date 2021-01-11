@@ -39,7 +39,7 @@ list ( APPEND RPNX_CORE_HEADERS
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
 
-  target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/windows/network.cpp)
+  #target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/windows/.cpp)
   #target_include_directories(rpnx-core PUBLIC public/headers/windows)
   #list ( APPEND RPNX_CORE_HEADERS public/headers/windows/rpnx/network.hpp)
   target_compile_definitions(rpnx-core PRIVATE _MBCS)

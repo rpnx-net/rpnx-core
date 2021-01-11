@@ -1025,6 +1025,36 @@ namespace rpnx
                 }
             }
 
+            void bind(ip4_udp_endpoint ep)
+            {
+                net_bind(*this, ep);
+            }
+
+            void bind(ip4_address addr)
+            {
+                ip4_udp_endpoint ep;
+                ep.address() = addr;
+                ep.port() = 0;
+                net_bind(*this, ep);
+            }
+
+            void bind(uint16_t portno)
+            {
+                ip4_udp_endpoint ep;
+                ep.address() = ip4_address::any();
+                ep.port() = portno;
+                net_bind(*this, ep);
+            }
+
+            void bind()
+            {
+                ip4_udp_endpoint ep;
+                ep.address() = ip4_address::any();
+                ep.port() = 0;
+                net_bind(*this, ep);
+            }
+
+
 #endif
         };
 
