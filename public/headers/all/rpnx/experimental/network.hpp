@@ -583,7 +583,7 @@ namespace rpnx
                 close();
                 m_sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
                 if (m_sock == INVALID_SOCKET)
-                    throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
+                    throw network_error("tcp_ip4_socket::open()+::socket", get_os_network_error_code());
 #else
                 close();
                 m_sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -598,10 +598,13 @@ namespace rpnx
                 detail::wsa_intializer::singleton();
                 open();
                 ::sockaddr_in sock_addr = listen_addr.native();
-                ::bind(m_sock, (sockaddr*)&sock_addr, sizeof(sockaddr_in));
+                if (::bind(m_sock, (sockaddr*)&sock_addr, sizeof(sockaddr_in)) == SOCKET_ERROR)
+                {
+                    throw network_error("tcp_ip4_socket::open()+::bind", get_os_network_error_code());
+                }
                 if (::listen(m_sock, SOMAXCONN) == SOCKET_ERROR)
                 {
-                    throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
+                    throw network_error("tcp_ip4_socket::open()+::listen", get_os_network_error_code());
                 }
 #else
                 this->open();
@@ -615,7 +618,7 @@ namespace rpnx
             }
 
 #ifdef _WIN32
-            SOCKET native() const noexcept
+            [[nodiscard]] SOCKET native() const noexcept
             {
                 return m_sock;
             }
@@ -724,7 +727,7 @@ namespace rpnx
             /**
               Returns a copy of the internal SOCKET. This class retains ownership of the SOCKET.
             */
-            native_socket_type native() const noexcept
+            [[nodiscard]] native_socket_type native() const noexcept
             {
                 return m_socket;
             }
@@ -732,14 +735,14 @@ namespace rpnx
             /**
              Extracts the internal SOCKET. The function relinquishes ownership of the socket and the class's internal socket becomes INVALID_SOCKET.
             */
-            native_socket_type extract_native() noexcept
+            [[nodiscard]] native_socket_type extract_native() noexcept
             {
                 native_socket_type skt = m_socket;
                 m_socket = -1;
                 return skt;
             }
 
-            bool valid() const noexcept
+            [[nodiscard]] bool valid() const noexcept
             {
                 return m_socket != -1;
             }
@@ -790,7 +793,6 @@ namespace rpnx
             {
                 throw network_error("upd_ip4_socket::send()", get_os_network_error_code());
             }
-            return;
 #else
             sockaddr_in dest = to.native();
             std::vector< std::byte > data(begin_packet, end_packet);
@@ -904,16 +906,16 @@ namespace rpnx
             detail::wsa_intializer::singleton();
 #endif
             std::array< char, 256 * 256 > buffer;
-            sockaddr_in from;
+            sockaddr_in from{};
             static_assert(sizeof(from) < INT_MAX);
 
 #ifdef _WIN32
-            int fromlen = sizeof(from);
+            int from_len = sizeof(from);
 #else
-            socklen_t fromlen = sizeof(from);
+            socklen_t from_len = sizeof(from);
 #endif
 
-            auto count = recvfrom(socket.native(), reinterpret_cast< char* >(buffer.data()), (int)buffer.size(), 0, reinterpret_cast< sockaddr* >(&from), &fromlen);
+            auto count = recvfrom(socket.native(), reinterpret_cast< char* >(buffer.data()), (int)buffer.size(), 0, reinterpret_cast< sockaddr* >(&from), &from_len);
             if (count == -1)
             {
                 throw network_error("upd_ip4_socket::receive()", get_os_network_error_code());
@@ -1010,7 +1012,7 @@ namespace rpnx
                 m_socket = -1;
             }
 
-            auto native() const
+            [[nodiscard]] auto native() const
             {
                 return m_socket;
             }
