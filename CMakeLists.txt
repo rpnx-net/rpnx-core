@@ -9,7 +9,7 @@ check_cxx_source_compiles("int main() { return __builtin_clz(1); }" RPNX_HAVE_BU
 check_cxx_source_compiles("#include <intrin.h>\nint main() { unsigned long index = 0; _BitScanReverse(&index, 1); }" RPNX_HAVE_BITSCANREVERSE)
 check_cxx_source_compiles("#include <intrin.h>\nint main() { unsigned long index = 0; _BitScanReverse64(&index, 1ull); }" RPNX_HAVE_BITSCANREVERSE64)
 
-add_library(rpnx-core)
+add_library(rpnx-core private/sources/all/experimental/async_service.cpp private/sources/windows/experimental/win_async_service.cpp)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
 
 target_sources(rpnx-core PRIVATE

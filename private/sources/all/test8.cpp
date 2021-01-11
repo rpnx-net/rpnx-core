@@ -3,6 +3,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include "rpnx/experimental/priority_dispatcher.hpp"
 
 int main()
 {
@@ -27,9 +28,11 @@ int main()
         socket2.open();
         socket2.bind();
 
+        rpnx::experimental::priority_dispatcher dispatch_engine;
+
         std::vector<std::byte> data_to_send = { (std::byte)1, (std::byte)2, (std::byte)3 };
 
-        rpnx::experimental::net_send(socket2, addr, data_to_send.begin(), data_to_send.end());
+        rpnx::experimental::net_send_async(socket2, addr, data_to_send.begin(), data_to_send.end(), dispatch_engine);
 
         std::vector<std::byte> data;
         rpnx::experimental::ip4_udp_endpoint from;

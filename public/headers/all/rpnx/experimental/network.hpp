@@ -164,23 +164,26 @@ namespace rpnx
 
         template < typename It >
         auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& from, It output_begin, It output_bounds_check) -> It;
-
         template < typename It >
         auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& from, It output_begin) -> It;
+        template < typename It >
+        auto net_receive(ip4_tcp_connection& socket, It output_begin, It output_end) -> void;
+        template < typename It >
+        auto net_receive(ip4_tcp_connection& socket, size_t count, It output) -> void;
+
 
         void net_bind(ip4_udp_socket& socket, ip4_udp_endpoint const& bind);
         void net_bind(async_ip4_udp_socket& socket, ip4_udp_endpoint const& bind);
 
         void net_listen(ip4_tcp_acceptor& socket, ip4_tcp_endpoint const& addr);
 
+        ip4_udp_endpoint net_endpoint(ip4_udp_socket& socket);
+        ip4_udp_endpoint net_endpoint(async_ip4_udp_socket& socket);
+
         ip4_tcp_connection net_accept_connection(ip4_tcp_acceptor&);
         void net_accept_connection(ip4_tcp_acceptor& socket, ip4_tcp_connection& connection);
 
-        template < typename It >
-        auto net_receive(ip4_tcp_connection& socket, It output_begin, It output_end) -> void;
 
-        template < typename It >
-        auto net_receive(ip4_tcp_connection& socket, size_t count, It output) -> void;
 
         class ip4_address final
         {
@@ -991,6 +994,11 @@ namespace rpnx
 #endif
 
           public:
+
+            auto endpoint()
+            {
+                return net_endpoint(*this);
+            }
 #ifdef _WIN32
             async_ip4_udp_socket()
                 : m_socket(INVALID_SOCKET)
@@ -1062,6 +1070,9 @@ namespace rpnx
 
         class async_service
         {
+          private:
+            void * m_pimpl;
+
 #ifdef _WIN32
           private:
             struct pending_operation
@@ -1070,20 +1081,13 @@ namespace rpnx
             };
 
           public:
-            async_service()
-            {
-            }
+            async_service();
+            ~async_service();
 
-            void submit(async_ip4_udp_send_request const& req)
-            {
-                pending_operation* op = new pending_operation();
+            void submit(async_ip4_udp_send_request const& req);
+            void cancel_all();
 
-                op->buf.buf = const_cast< char* >((char const*)req.data);
-                op->buf.len = req.data_len;
-                //::WSASend(req.socket->native());
-            }
-
-#elif defined(__linux__)
+#elif false
           private:
             enum class op_type
             {
@@ -1146,6 +1150,68 @@ namespace rpnx
                return;
             });
         }
+
+        inline ip4_udp_endpoint net_endpoint(ip4_udp_socket& socket)
+        {
+#ifdef _WIN32
+            detail::wsa_intializer::singleton();
+            sockaddr_in addr;
+            int len = sizeof(addr);
+
+            auto result = ::getsockname(socket.native(), (sockaddr*)&addr, &len);
+
+            if (result == SOCKET_ERROR)
+            {
+                throw network_error("upd_ip4_socket::endpoint()", get_os_network_error_code());
+            }
+            assert(len == sizeof(addr));
+            return addr;
+#else
+            sockaddr_in addr;
+                socklen_t len = sizeof(addr);
+
+                auto result = ::getsockname(socket.native(), (sockaddr*)&addr, &len);
+
+                if (result == -1)
+                {
+                    throw network_error("upd_ip4_socket::endpoint()", get_os_network_error_code());
+                }
+                assert(len == sizeof(addr));
+                return addr;
+#endif
+        }
+        inline ip4_udp_endpoint net_endpoint(async_ip4_udp_socket& socket)
+        {
+#ifdef _WIN32
+            detail::wsa_intializer::singleton();
+            sockaddr_in addr;
+            int len = sizeof(addr);
+
+            auto result = ::getsockname(socket.native(), (sockaddr*)&addr, &len);
+
+            if (result == SOCKET_ERROR)
+            {
+                throw network_error("upd_ip4_socket::endpoint()", get_os_network_error_code());
+            }
+            assert(len == sizeof(addr));
+            return addr;
+#else
+            sockaddr_in addr;
+                socklen_t len = sizeof(addr);
+
+                auto result = ::getsockname(socket.native(), (sockaddr*)&addr, &len);
+
+                if (result == -1)
+                {
+                    throw network_error("upd_ip4_socket::endpoint()", get_os_network_error_code());
+                }
+                assert(len == sizeof(addr));
+                return addr;
+#endif
+        }
+
+        async_service& default_async_service();
+
     } // namespace experimental
 } // namespace rpnx
 
