@@ -1073,12 +1073,6 @@ namespace rpnx
           private:
             void * m_pimpl;
 
-#ifdef _WIN32
-          private:
-            struct pending_operation
-            {
-                WSABUF buf;
-            };
 
           public:
             async_service();
@@ -1087,36 +1081,6 @@ namespace rpnx
             void submit(async_ip4_udp_send_request const& req);
             void cancel_all();
 
-#elif false
-          private:
-            enum class op_type
-            {
-                read,
-                write
-            };
-            struct pending_operation
-            {
-                int fd;
-                void* data;
-                std::size_t data_len;
-                op_type operation;
-            };
-
-            int m_epoll_instance;
-            std::set< pending_operation* > m_registered_pending_operations;
-
-          public:
-            async_service()
-            {
-                m_epoll_instance = ::epoll_create(0);
-                if (m_epoll_instance == -1)
-                    throw std::runtime_error("Failed to create epoll instance");
-            }
-
-            void submit(async_ip4_udp_send_request const& req)
-            {
-            }
-#endif
         };
 
         inline void net_bind(async_ip4_udp_socket& socket, ip4_udp_endpoint const& bind_addr)
