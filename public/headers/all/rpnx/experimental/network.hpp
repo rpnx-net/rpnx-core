@@ -989,9 +989,7 @@ namespace rpnx
         {
             friend void net_bind(async_ip4_udp_socket &, ip4_udp_endpoint const &);
           private:
-#ifdef _WIN32
-            SOCKET m_socket;
-#endif
+            native_socket_type m_socket;
 
           public:
 
@@ -999,6 +997,26 @@ namespace rpnx
             {
                 return net_endpoint(*this);
             }
+
+#ifndef _WIN32
+            bool is_open() const { return m_socket != -1; }
+            void open()
+            {
+                m_socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+                if (m_socket == -1)
+                {
+                    throw std::runtime_error("SOCKET");
+                }
+            }
+
+            [[nodiscard]] native_socket_type native() const
+            {
+                return m_socket;
+            }
+
+#endif
+
+
 #ifdef _WIN32
             async_ip4_udp_socket()
                 : m_socket(INVALID_SOCKET)
