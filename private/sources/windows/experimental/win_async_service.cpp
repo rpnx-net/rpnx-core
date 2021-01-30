@@ -27,7 +27,8 @@ namespace rpnx
 
 static inline rpnx::win32_async_service* impl(void* ptr)
 {
-    return reinterpret_cast< implementation::win32_async_service* >(ptr);
+
+    return reinterpret_cast< rpnx::implementation::win32_async_service* >(ptr);
 }
 
 rpnx::experimental::async_service::async_service() : m_pimpl(nullptr)
@@ -42,10 +43,12 @@ void rpnx::experimental::async_service::submit(const async_ip4_udp_send_request&
 
 void rpnx::experimental::async_service::cancel_all()
 {
+    // TODO
 }
 
 rpnx::win32_async_service::win32_async_service()
 {
+    // TODO
     // m_iocp_handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, );
 }
 
