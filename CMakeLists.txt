@@ -35,43 +35,31 @@ list ( APPEND RPNX_CORE_HEADERS
         public/headers/all/rpnx/experimental/cpuarchinfo.hpp
         public/headers/all/rpnx/experimental/scoped_action.hpp
         public/headers/all/rpnx/experimental/avl_tree.hpp
+        public/headers/all/rpnx/experimental/source_iterator.hpp
     )
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
-
-  #target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/windows/.cpp)
-  #target_include_directories(rpnx-core PUBLIC public/headers/windows)
-  #list ( APPEND RPNX_CORE_HEADERS public/headers/windows/rpnx/network.hpp)
-  target_compile_definitions(rpnx-core PRIVATE _MBCS)
-  target_link_libraries(rpnx-core ws2_32)
-
-endif()
+    # Windows specific code goes here
+    target_compile_definitions(rpnx-core PRIVATE _MBCS)
+    target_link_libraries(rpnx-core ws2_32)
+endif ()
 
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  #target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/linux/network.cpp)
-  #target_include_directories(rpnx-core PUBLIC public/headers/linux)
-  #list ( APPEND RPNX_CORE_HEADERS public/headers/linux/rpnx/network.hpp)
+    # Linux specific code goes here
 endif()
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
-  #target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/mac/network.cpp)
-  #target_include_directories(rpnx-core PUBLIC public/headers/mac)
-  #list ( APPEND RPNX_CORE_HEADERS public/headers/linux/rpnx/network.hpp)
+    # Mac specific code goes here
 endif()
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
- #target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/bsd/network.cpp)
-
- #target_include_directories(rpnx-core PUBLIC public/headers/bsd)
+    # FreeBSD Specific code goes here
 endif()
-
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
- target_sources(rpnx-core PRIVATE ${CMAKE_CURRENT_LIST_DIR}/private/sources/linux/network.cpp)
- #target_include_directories(rpnx-core PUBLIC public/headers/linux)
+    # Android specific code goes here
 endif()
-
 
 message("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
