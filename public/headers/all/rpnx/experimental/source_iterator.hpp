@@ -63,53 +63,19 @@ namespace rpnx::experimental
 
         source_iterator< It >& operator++()
         {
-            if (m_state == state::text)
+            if (*m_iter == '\n' && !(m_state == state::r))
             {
-                if (*m_iter == '\r')
-                {
-                    m_state = state::r;
-                }
-                else if (*m_iter == '\n')
-                {
-                    m_state = state::n;
-                }
-            }
-            else if (m_state == state::r)
-            {
-                if (*m_iter == '\r')
-                {
-                    m_line++;
-                    m_col = 0;
-                }
-                else if (*m_iter == '\n')
-                {
-                    m_state = state::n;
-                }
-                else
-                {
-                    m_state = state::text;
-                    m_line++;
-                    m_col = 0;
-                }
-            }
-            else if (m_state == state::n)
-            {
+                m_state = state::n;
                 m_line++;
                 m_col = 0;
-                if (*m_iter == '\r')
-                {
-                    m_state = state::r;
-                }
-                else if (*m_iter == '\n')
-                {
-                    m_state = state::n;
-                }
-                else
-                {
-                    m_state = state::text;
-                }
             }
-
+            else if (*m_iter == '\r')
+            {
+                m_state = state::r;
+                m_line++;
+                m_col = 0;
+            }
+            ++m_iter;
             return *this;
         }
         source_iterator< It > operator++(int)
@@ -119,12 +85,39 @@ namespace rpnx::experimental
             return copy;
         }
 
+        auto operator*() const
+        {
+            return *m_iter;
+        }
+
         std::size_t line() const
         {
+            if (m_state == state::r)
+            {
+                if (*m_iter == '\n')
+                {
+                    return m_line;
+                }
+                else
+                {
+                    return m_line + 1;
+                }
+            }
             return m_line;
         }
         std::size_t column() const
         {
+            if (m_state == state::r)
+            {
+                if (*m_iter == '\n')
+                {
+                    return m_col;
+                }
+                else
+                {
+                    return 0;
+                }
+            }
             return m_col;
         }
         std::string name() const
