@@ -12,8 +12,7 @@ int main()
     std::string code = "#include <iostream>\r\n\r\nint main()\n{\r  std::cout << \"Hello World!\" << std::endl;\n  return 0;\n}\n";
 
     using namespace rpnx::experimental;
-    auto [it, end] = make_source_iterator_pair("hello.cpp", code);
-
+    auto [it, end] = make_forward_source_iterator_pair("hello.cpp", code);
 
     std::string search_string = "Hello";
 
