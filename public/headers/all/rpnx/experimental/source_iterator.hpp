@@ -3,12 +3,17 @@
 
 #include <memory>
 #include <string>
+#include <iterator>
 
 namespace rpnx::experimental
 {
     template < typename It >
     class source_iterator
     {
+      public:
+
+        //using reference =
+      private:
         It m_iter;
         std::shared_ptr< std::string > m_filename;
 
@@ -59,6 +64,7 @@ namespace rpnx::experimental
 
         source_iterator< It >& operator++()
         {
+            m_col++;
             if (*m_iter == '\n' && !(m_state == state::r))
             {
                 m_state = state::n;
@@ -84,6 +90,7 @@ namespace rpnx::experimental
             ++*this;
             return copy;
         }
+
 
         auto operator*() const
         {
@@ -158,5 +165,21 @@ namespace rpnx::experimental
         return std::make_pair(source_iterator<decltype(begin)>(begin, fname), source_iterator<decltype(begin)>(end));
     }
 } // namespace rpnx::experimental
+
+
+namespace std
+{
+    template <typename It>
+    struct iterator_traits<rpnx::experimental::source_iterator<It>>
+    {
+       using value_type = typename std::iterator_traits<It>::value_type;
+       using pointer = typename std::iterator_traits<It>::pointer;
+       using iterator_category = std::forward_iterator_tag;
+       using reference = typename std::iterator_traits<It>::reference;
+    };
+}
+
+
+
 
 #endif // RPNXCORE_SOURCE_ITERATOR_HPP

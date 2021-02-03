@@ -36,6 +36,7 @@ list ( APPEND RPNX_CORE_HEADERS
         public/headers/all/rpnx/experimental/scoped_action.hpp
         public/headers/all/rpnx/experimental/avl_tree.hpp
         public/headers/all/rpnx/experimental/source_iterator.hpp
+        public/headers/all/rpnx/experimental/parsing.hpp
     )
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")

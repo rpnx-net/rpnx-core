@@ -4,6 +4,7 @@
 #include "rpnx/experimental/source_iterator.hpp"
 #include <chrono>
 #include <iostream>
+#include <regex>
 #include <thread>
 
 int main()
@@ -12,6 +13,16 @@ int main()
 
     using namespace rpnx::experimental;
     auto [it, end] = make_source_iterator_pair("hello.cpp", code);
+
+
+    std::string search_string = "Hello";
+
+    auto result = std::search(it, end, search_string.begin(), search_string.end());
+
+    if (result != end)
+    {
+        std::cout << "Found " << search_string << " at " << result.file_name()<< ":" << result.line() << ":" << result.column() << std::endl;
+    }
 
     int last_line = -1;
     while (it != end)
@@ -34,4 +45,5 @@ int main()
     }
 
     std::cout.flush();
+
 }
