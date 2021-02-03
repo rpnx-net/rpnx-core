@@ -1,7 +1,3 @@
-//
-// Created by Ryan on 2/2/2021.
-//
-
 #ifndef RPNXCORE_SOURCE_ITERATOR_HPP
 #define RPNXCORE_SOURCE_ITERATOR_HPP
 
@@ -75,6 +71,10 @@ namespace rpnx::experimental
                 m_line++;
                 m_col = 0;
             }
+            else
+            {
+                m_state = state::text;
+            }
             ++m_iter;
             return *this;
         }
@@ -100,11 +100,12 @@ namespace rpnx::experimental
                 }
                 else
                 {
-                    return m_line + 1;
+                    return m_line;
                 }
             }
             return m_line;
         }
+
         std::size_t column() const
         {
             if (m_state == state::r)
@@ -141,6 +142,21 @@ namespace rpnx::experimental
         }
          */
     };
+
+
+    template <typename It>
+    inline auto make_source_iterator(std::string const & filename, It at, std::size_t line = 0, std::size_t col = 0)
+    {
+        return source_iterator<It>(at, filename, line, col);
+    }
+
+    template <typename C>
+    inline auto make_source_iterator_pair(std::string const & fname, C&& container)
+    {
+        auto begin = std::begin(container);
+        auto end = std::end(container);
+        return std::make_pair(source_iterator<decltype(begin)>(begin, fname), source_iterator<decltype(begin)>(end));
+    }
 } // namespace rpnx::experimental
 
 #endif // RPNXCORE_SOURCE_ITERATOR_HPP

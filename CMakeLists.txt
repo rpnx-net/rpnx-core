@@ -116,3 +116,4 @@ target_link_libraries(rpnx-core-benchmark1 rpnx-core Threads::Threads)
 
 install(TARGETS rpnx-core EXPORT rpnx_exports)
 export(EXPORT rpnx_exports FILE RPNXCoreConfig.cmake  NAMESPACE RPNX::)
+
