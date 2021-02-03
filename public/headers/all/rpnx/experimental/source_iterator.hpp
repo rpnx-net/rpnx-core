@@ -121,7 +121,7 @@ namespace rpnx::experimental
             }
             return m_col;
         }
-        std::string name() const
+        std::string file_name() const
         {
             return *m_filename;
         }

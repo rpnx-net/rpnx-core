@@ -23,7 +23,7 @@ int main()
                 std::cout << '\n';
             }
 
-            std::cout << it.name() << ":" << it.line() << ": ";
+            std::cout << it.file_name() << ":" << it.line() << ": ";
 
             last_line = it.line();
         }
