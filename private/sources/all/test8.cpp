@@ -1,53 +1,48 @@
 #include "rpnx/experimental/network.hpp"
 
-#include <iostream>
-#include <thread>
-#include <chrono>
 #include "rpnx/experimental/priority_dispatcher.hpp"
+#include "rpnx/experimental/source_iterator.hpp"
+#include <chrono>
+#include <iostream>
+#include <regex>
+#include <thread>
 
 int main()
 {
-    try
+    std::string code = "#include <iostream>\r\n\r\nint main()\n{\r  std::cout << \"Hello World!\" << std::endl;\n  return 0;\n}\n";
+
+    using namespace rpnx::experimental;
+    auto [it, end] = make_forward_source_iterator_pair("hello.cpp", code);
+
+    std::string search_string = "Hello";
+
+    auto result = std::search(it, end, search_string.begin(), search_string.end());
+
+    if (result != end)
     {
+        std::cout << "Found " << search_string << " at " << result.file_name()<< ":" << result.line() << ":" << result.column() << std::endl;
+    }
 
-        rpnx::experimental::async_ip4_udp_socket socket;
-        socket.open();
-        socket.bind({ rpnx::experimental::ip4_address::any(), 0 });
-        auto addr = socket.endpoint();
-
-        std::cout << addr << std::endl;
-
-        rpnx::experimental::ip4_udp_socket socket2;
-
-        addr.address()[0] = 127;
-        addr.address()[1] = 0;
-        addr.address()[2] = 0;
-        addr.address()[3] = 1;
-
-
-        socket2.open();
-        socket2.bind();
-
-        rpnx::experimental::priority_dispatcher dispatch_engine;
-
-        std::vector<std::byte> data_to_send = { (std::byte)1, (std::byte)2, (std::byte)3 };
-
-        rpnx::experimental::net_send_async(socket2, addr, data_to_send.begin(), data_to_send.end(), dispatch_engine);
-
-        std::vector<std::byte> data;
-        rpnx::experimental::ip4_udp_endpoint from;
-        rpnx::experimental::net_receive(socket, from, std::back_inserter(data));
-
-        std::cout << from << std::endl;
-
-        for (auto const& x : data)
+    int last_line = -1;
+    while (it != end)
+    {
+        if (it.line() != last_line)
         {
-            std::cout << (int) x << std::endl;
+            if (last_line != -1)
+            {
+                std::cout << '\n';
+            }
+
+            std::cout << it.file_name() << ":" << it.line() << ": ";
+
+            last_line = it.line();
         }
 
+        if (*it != '\r' && *it != '\n')
+            std::cout << *it;
+        it++;
     }
-    catch (std::exception const & err)
-    {
-        std::cerr << err.what() << std::endl;
-    }
+
+    std::cout.flush();
+
 }
