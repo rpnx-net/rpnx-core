@@ -49,7 +49,7 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
 
 
     list ( APPEND RPNX_CORE_HEADERS
-            public/headers/windows/rpnx/environment.hpp
+            public/headers/all/rpnx/environment.hpp
             )
 endif ()
 
