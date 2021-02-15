@@ -15,7 +15,10 @@
 #include <filesystem>
 
 #ifndef _WIN32
-extern "C" extern char **environ;
+extern "C"
+{
+    extern char** environ;
+}
 #endif
 
 namespace rpnx
@@ -68,7 +71,8 @@ namespace rpnx
     inline void set_environment_variable(std::string const & key, std::string const & value)
     {
         std::unique_lock lock (environment_mutex);
-        putenv((key + "=" + value).c_str());
+
+        putenv(const_cast<char*>((key + "=" + value).c_str()));
         // TODO check for enomem etc
     }
 
@@ -85,9 +89,12 @@ namespace rpnx
             else return results;
         }
 
-        // TODO: Modify this to properly accept path values with semicolons in them (e.g. /mnt/c;"/foo/bar;baz";
-
+        // TODO: Modify this to properly accept path values with semicolons/colons in them (e.g. /mnt/c:"/foo/bar:baz";
+#ifdef _WIN32
         std::regex re("[^;]+");
+#else
+        std::regex re("[^:]+");
+#endif
         auto re_begin = std::sregex_iterator(path_string.begin(), path_string.end(), re);
         auto re_end = std::sregex_iterator();
 
@@ -116,7 +123,7 @@ namespace rpnx
 
       return result;
 #else
-      return get_environment_variable("CWD");
+      return get_environment_variable("PWD").value_or("");
 #endif
     }
 
