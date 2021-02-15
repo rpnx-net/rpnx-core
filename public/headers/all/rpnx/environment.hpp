@@ -102,8 +102,7 @@ namespace rpnx
         return results;
     }
 
-    /** Like std::filesystem::current_path, except thread-safe when used exclusively with other rpnx functions to mutate the environment.
-     */
+
     inline std::filesystem::path current_path()
     {
 #ifdef _WIN32
