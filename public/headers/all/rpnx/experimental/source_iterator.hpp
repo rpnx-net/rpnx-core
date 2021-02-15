@@ -8,6 +8,29 @@
 namespace rpnx::experimental
 {
     template < typename It >
+    class bidirectional_source_iterator
+    {
+      private:
+        It m_iter;
+        It m_begin;
+        It m_end;
+
+        std::size_t m_line = 0;
+        std::size_t m_col = 0;
+        std::string m_fname;
+
+      public:
+        bidirectional_source_iterator()
+        {
+        }
+
+        bidirectional_source_iterator(It a_begin, It a_end, It a_pos, std::string a_fname, std::size_t a_line = 0, std::size_t a_column = 0)
+            : m_iter(a_pos), m_begin(a_begin), m_end(a_end), m_line(a_line), m_col(a_column)
+        {
+        }
+    };
+
+    template < typename It >
     class forward_source_iterator
     {
       public:
