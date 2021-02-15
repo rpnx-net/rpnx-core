@@ -15,7 +15,7 @@ See rpnx-core/LICENSE.txt
 #include <vector>
 #include <memory>
 #include <climits>
-#include <limits.h>
+#include <limits>
 #include <iterator>
 #include <climits>
 
