@@ -37,12 +37,20 @@ list ( APPEND RPNX_CORE_HEADERS
         public/headers/all/rpnx/experimental/avl_tree.hpp
         public/headers/all/rpnx/experimental/source_iterator.hpp
         public/headers/all/rpnx/experimental/parsing.hpp
+
     )
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
     # Windows specific code goes here
-    target_compile_definitions(rpnx-core PRIVATE _MBCS)
+    target_compile_definitions(rpnx-core PRIVATE _MBCS _CRT_SECURE_NO_WARNINGS)
+    target_include_directories(rpnx-core PUBLIC public/headers/windows)
+
     target_link_libraries(rpnx-core ws2_32)
+
+
+    list ( APPEND RPNX_CORE_HEADERS
+            public/headers/windows/rpnx/environment.hpp
+            )
 endif ()
 
 
@@ -109,6 +117,11 @@ add_executable(rpnx-core-test8)
 set_target_properties(rpnx-core-test8 PROPERTIES CXX_STANDARD 17)
 target_sources(rpnx-core-test8 PRIVATE private/sources/all/test8.cpp)
 target_link_libraries(rpnx-core-test8 rpnx-core)
+
+add_executable(rpnx-core-test9)
+set_target_properties(rpnx-core-test9 PROPERTIES CXX_STANDARD 17)
+target_sources(rpnx-core-test9 PRIVATE private/sources/all/test9.cpp)
+target_link_libraries(rpnx-core-test9 rpnx-core)
 
 add_executable(rpnx-core-benchmark1)
 set_target_properties(rpnx-core-benchmark1 PROPERTIES CXX_STANDARD 17)
