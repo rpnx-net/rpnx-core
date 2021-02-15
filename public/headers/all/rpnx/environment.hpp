@@ -27,10 +27,6 @@ namespace rpnx
 
     inline std::mutex environment_mutex;
 
-    /** A thread safe way to get all environment variables
-     *
-     * @return
-     */
     inline std::map<std::string, std::string> get_environment()
     {
         std::unique_lock lock (environment_mutex);
