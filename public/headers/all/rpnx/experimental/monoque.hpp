@@ -17,6 +17,7 @@ See rpnx-core/LICENSE.txt
 #include <climits>
 #include <limits.h>
 #include <iterator>
+#include <climits>
 
 #include "rpnx/assert.hpp"
 
