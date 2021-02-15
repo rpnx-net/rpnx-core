@@ -1,9 +1,8 @@
 # rpnx-core
 
-A work in progress C++ library that provides cross platform C++ OS abstractions, data structures, and algorithms.
+A work in progress generic programming C++ library that provides cross platform C++ OS abstractions, data structures, and algorithms.
 
 If you use this library, all symbols in the rpnx:: namespace and macros that begin with RPNX_ are reserved for use by the library.
-
 
 Supported OS:
 
@@ -21,7 +20,6 @@ Not currently supported OS:
 * VxWorks
 * Other BSD
 * Illumos
-
 
 Supported compilers:
 
