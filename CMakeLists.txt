@@ -31,6 +31,7 @@ list ( APPEND RPNX_CORE_HEADERS
         public/headers/all/rpnx/experimental/processor.hpp
         public/headers/all/rpnx/experimental/priority_dispatcher.hpp
         public/headers/all/rpnx/experimental/monoque.hpp
+        public/headers/all/rpnx/experimental/conveyor.hpp
         public/headers/all/rpnx/experimental/bitwise.hpp
         public/headers/all/rpnx/experimental/cpuarchinfo.hpp
         public/headers/all/rpnx/experimental/scoped_action.hpp
