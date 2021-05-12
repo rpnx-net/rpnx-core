@@ -4,6 +4,8 @@ A work in progress generic programming C++ library that provides cross platform 
 
 If you use this library, all symbols in the rpnx:: namespace and macros that begin with RPNX_ are reserved for use by the library.
 
+Documentation will (eventually) be available here: https://rpnx-net.github.io/rpnx-core-docs-prebuilt/annotated.html
+
 Documentation source (doxygen): https://github.com/rpnx-net/rpnx-core-docs
 
 Supported OS:
