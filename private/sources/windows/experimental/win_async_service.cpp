@@ -45,24 +45,34 @@ rpnx::experimental::async_service::async_service() : m_pimpl(nullptr)
     m_pimpl = reinterpret_cast< void* >(new win32_async_service());
 }
 
+rpnx::experimental::async_service::~async_service()
+{
+    delete reinterpret_cast< win32_async_service* >(m_pimpl);
+}
+/*
 void rpnx::experimental::async_service::submit(const async_ip4_udp_send_request& req)
 {
-    impl(m_pimpl)->submit(req);
+    // TODO
+   // impl(m_pimpl)->submit(req);
 }
+*/
 
+/*
 void rpnx::experimental::async_service::cancel_all()
 {
     // TODO
 }
+ */
 
 rpnx::experimental::win32_async_service::win32_async_service()
 {
     // TODO
-    // m_iocp_handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, );
+    m_iocp_handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, ULONG_PTR(0), 0);
 }
 
 rpnx::experimental::win32_async_service::~win32_async_service()
 {
+    CloseHandle(m_iocp_handle);
     // TODO
 }
 

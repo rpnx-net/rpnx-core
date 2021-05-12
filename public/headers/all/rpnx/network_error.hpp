@@ -51,7 +51,7 @@ namespace rpnx
         }
     };
 
-    std::error_category& network_category()
+    inline std::error_category& network_category()
     {
         static network_category_t singleton;
         return singleton;

@@ -104,6 +104,24 @@ namespace rpnx
                 submit(ef, &delete_functor<F>, reinterpret_cast<void*>(f_copy), priority);
             }
         };
+
+        class priority_submitter
+        {
+            std::int64_t m_pri;
+            priority_dispatcher & m_disp;
+          public:
+            priority_submitter(priority_dispatcher & disp, std::int64_t priority)
+            : m_pri(priority), m_disp(disp)
+            {
+
+            }
+
+            template <typename F>
+            void submit(F && f)
+            {
+                m_disp.submit(std::forward<F>(f), m_pri);
+            }
+        };
     }
 }
 

@@ -8,9 +8,16 @@ include(CheckCXXSourceCompiles)
 check_cxx_source_compiles("int main() { return __builtin_clz(1); }" RPNX_HAVE_BUILTIN_CLZ)
 check_cxx_source_compiles("#include <intrin.h>\nint main() { unsigned long index = 0; _BitScanReverse(&index, 1); }" RPNX_HAVE_BITSCANREVERSE)
 check_cxx_source_compiles("#include <intrin.h>\nint main() { unsigned long index = 0; _BitScanReverse64(&index, 1ull); }" RPNX_HAVE_BITSCANREVERSE64)
+check_cxx_source_compiles("int main() { __builtin_assume(1 == 1); }" RPNX_HAVE_BUILTIN_ASSUME)
+
+
 
 add_library(rpnx-core private/sources/all/experimental/async_service.cpp private/sources/windows/experimental/win_async_service.cpp)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
+
+if (RPNX_HAVE_BUILTIN_ASSUME)
+    target_compile_definitions(rpnx-core PUBLIC RPNX_HAVE_BUILTIN_ASSUME)
+endif()
 
 target_sources(rpnx-core PRIVATE
         private/sources/all/experimental/priority_dispatcher.cpp
@@ -33,6 +40,8 @@ list ( APPEND RPNX_CORE_HEADERS
         public/headers/all/rpnx/experimental/monoque.hpp
         public/headers/all/rpnx/experimental/conveyor.hpp
         public/headers/all/rpnx/experimental/bitwise.hpp
+        public/headers/all/rpnx/experimental/result.hpp
+        public/headers/all/rpnx/experimental/channel.hpp
         public/headers/all/rpnx/experimental/cpuarchinfo.hpp
         public/headers/all/rpnx/experimental/scoped_action.hpp
         public/headers/all/rpnx/experimental/avl_tree.hpp

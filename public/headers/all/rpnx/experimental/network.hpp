@@ -2,9 +2,12 @@
 #define RPNXCORE_NETWORK_HPP
 
 #include <future>
+#include "rpnx/assert.hpp"
+#include "rpnx/experimental/channel.hpp"
 
 #ifdef _WIN32
 #include <WinSock2.h>
+#include <in6addr.h>
 #endif
 
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
@@ -38,8 +41,13 @@
 #include <system_error>
 #include <vector>
 
+#include "result.hpp"
 #include "rpnx/network_error.hpp"
 #include <set>
+
+#include <utility>
+#include <type_traits>
+#include <cstring>
 
 namespace rpnx
 {
@@ -138,7 +146,16 @@ namespace rpnx
         using native_socket_type = int;
 #endif
 
-
+        template <class T1, class T2>
+        constexpr T1 bit_cast(T2 const& value) noexcept
+        {
+            static_assert(sizeof(T1) == sizeof(T2));
+            static_assert(std::is_trivially_copyable_v<T1>);            
+            static_assert(std::is_trivially_copyable_v<T2>);
+            T1 t;
+            std::memcpy(&t, &value, sizeof(value));
+            return t;
+        }
 
         class ip4_udp_socket;
         class ip4_udp_endpoint;
@@ -155,6 +172,8 @@ namespace rpnx
         class async_service;
 
         class async_ip4_udp_socket;
+
+        class async_ip6_tcp_acceptor;
 
         template < typename It >
         void net_send(ip4_udp_socket& socket, ip4_udp_endpoint const& to, It input_begin, It input_end);
@@ -183,7 +202,85 @@ namespace rpnx
         ip4_tcp_connection net_accept_connection(ip4_tcp_acceptor&);
         void net_accept_connection(ip4_tcp_acceptor& socket, ip4_tcp_connection& connection);
 
+        class ip6_address 
+        {
+#ifdef _WIN32
+            IN6_ADDR m_data;
+#else
+            in6_addr m_data;
+#endif
+        public:
+            constexpr ip6_address() noexcept
+            : m_data{}
+            { }
+            
+            constexpr ip6_address(ip6_address const &) = default;
+            
+            #ifdef _WIN32
+            constexpr ip6_address(IN6_ADDR const & other)
+                : m_data{}
+            {
+                for (int i = 0; i < size(); i++)
+                {
+                    m_data.u.Byte[i] = *(reinterpret_cast<unsigned char const*>(&other)+i);
+                }
+            }
 
+            inline constexpr IN6_ADDR const& native() const
+            {
+                return m_data;
+            }
+
+            constexpr inline std::size_t size() const noexcept { return 16; }
+
+            constexpr std::uint8_t & operator[](int index)
+            {
+                //RPNX_ASSERT(index < size());
+                return m_data.u.Byte[index];
+            }
+
+            constexpr std::uint8_t const & operator[](int index) const
+            {
+                //RPNX_ASSERT(index < size());
+                return m_data.u.Byte[index];
+            }
+
+
+            #else
+            inline constexpr in6_addr const & native() const
+            {
+                return m_data;
+            }
+            #endif
+            
+            
+            
+            
+        };
+
+        class ip6_tcp_endpoint
+        {
+            ip6_address m_addr;
+            std::uint16_t m_port;
+          public:
+            ip6_address& address()
+            {
+                return m_addr;
+            }
+            std::uint16_t& port()
+            {
+                return m_port;
+            }
+
+            ip6_address const& address() const
+            {
+                return m_addr;
+            }
+            std::uint16_t const& port() const
+            {
+                return m_port;
+            }
+        };
 
         class ip4_address final
         {
@@ -977,6 +1074,8 @@ namespace rpnx
 #endif
         }
 
+
+
         struct async_ip4_udp_send_request
         {
             ip4_udp_socket* socket;
@@ -1096,9 +1195,100 @@ namespace rpnx
             async_service();
             ~async_service();
 
-            void submit(async_ip4_udp_send_request const& req);
-            void cancel_all();
+            //void submit(async_ip4_udp_send_request const& req);
+            //void cancel_all();
 
+        };
+
+        template<typename Submitter, typename T>
+        class action_channel_transfer
+        {
+            friend class async_service;
+            Submitter & m_sub_ref;
+            channel<T> & m_channel_ref;
+          public:
+            action_channel_transfer(Submitter & sub, channel<T> & chan)
+            : m_sub_ref(sub), m_channel_ref(chan)
+            {}
+        };
+
+        template <typename MainAction, typename ... AuxActions>
+        class async_ip6_tcp_autoacceptor;
+
+        class async_ip6_tcp_acceptor
+        {
+            template <typename MainAction, typename ... AuxActions>
+            friend class async_ip6_tcp_autoacceptor;
+#ifdef _WIN32
+            SOCKET m_socket;
+#else
+            int m_socket;
+#endif
+          public:
+#ifdef _WIN32
+            async_ip6_tcp_acceptor()
+            {
+
+                m_socket = WSASocketW( AF_INET6, SOCK_STREAM, IPPROTO_TCP,
+                                      nullptr, 0, WSA_FLAG_OVERLAPPED);
+                if (m_socket == INVALID_SOCKET) throw network_error("async_ip6_tcp_acceptor::async_ip6_tcp_acceptor()", get_os_network_error_code());
+            }
+
+            SOCKET native() const
+            {
+                return m_socket;
+            }
+#endif
+        };
+
+        class async_ip6_tcp_acceptor_ref
+        {
+#ifdef _WIN32
+            SOCKET m_socket;
+#else
+            int m_socket;
+#endif
+
+          public:
+            async_ip6_tcp_acceptor_ref() : m_socket(-1) {}
+            async_ip6_tcp_acceptor_ref(async_ip6_tcp_acceptor_ref const &) = default;
+            async_ip6_tcp_acceptor_ref(async_ip6_tcp_acceptor const & other)
+            : m_socket(other.native())
+            {}
+        };
+
+
+
+        template <typename MainAction, typename ... AuxActions>
+        class async_ip6_tcp_autoacceptor
+        {
+            async_ip6_tcp_acceptor_ref m_socket;
+            std::mutex m_mtx;
+            std::condition_variable m_cond;
+            MainAction m_action;
+            std::tuple<AuxActions...> m_aux;
+          public:
+            async_ip6_tcp_autoacceptor(async_ip6_tcp_acceptor & socket
+                                       , async_service & async
+                                       , ip6_tcp_endpoint ep
+                                       , MainAction completion_action
+                                       , AuxActions && ... aux_actions
+                                       )
+            : m_socket(socket)
+            , m_action(std::move(completion_action))
+            , m_aux(std::forward<AuxActions>(aux_actions)...)
+            {
+
+            }
+
+            ~async_ip6_tcp_autoacceptor()
+            {
+            }
+
+          private:
+            void run_loop()
+            {
+            }
         };
 
         inline void net_bind(async_ip4_udp_socket& socket, ip4_udp_endpoint const& bind_addr)
