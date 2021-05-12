@@ -66,6 +66,8 @@ endif ()
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
     # Linux specific code goes here
+
+    target_sources(rpnx-core PRIVATE private/sources/epoll/experimental/epoll_async_service.cpp)
 endif()
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")

@@ -28,7 +28,7 @@ int main()
          */
         rpnx::experimental::ip6_address addr6;
 
-        IN6_ADDR addr_native = addr6.native();
+        auto addr_native = addr6.native();
 
         //rpnx::experimental::ip6_tcp_acceptor acceptor6;
         rpnx::experimental::priority_dispatcher dispatch;

@@ -16,6 +16,8 @@
 #include <sys/types.h>
 #endif
 
+#include <fcntl.h>
+
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/socket.h>
@@ -45,9 +47,10 @@
 #include "rpnx/network_error.hpp"
 #include <set>
 
-#include <utility>
-#include <type_traits>
 #include <cstring>
+
+#include <type_traits>
+#include <utility>
 
 namespace rpnx
 {
@@ -1238,6 +1241,20 @@ namespace rpnx
             {
                 return m_socket;
             }
+#else
+            async_ip6_tcp_acceptor()
+            {
+                m_socket = ::socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+
+                ::fcntl(m_socket, F_SETFL, O_NONBLOCK);
+                // TODO: Error checking here
+            }
+
+            int native() const
+            {
+                return m_socket;
+            }
+            // TODO
 #endif
         };
 
