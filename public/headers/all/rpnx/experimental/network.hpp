@@ -59,6 +59,9 @@ namespace rpnx
 #ifdef _WIN32
         namespace detail
         {
+
+            struct async_ip6_tcp_autoacceptor_binding;
+
             class wsa_intializer
             {
               private:
@@ -141,6 +144,10 @@ namespace rpnx
         using native_socket_type = SOCKET;
         using native_sockaddr_length_type = int;
         static const constexpr native_socket_type native_invalid_socket_value = INVALID_SOCKET;
+        inline auto native_close_socket(native_socket_type skt)
+        {
+            return ::closesocket(skt);
+        }
 #endif
 
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
@@ -151,6 +158,10 @@ namespace rpnx
         using native_socket_type = int;
         using native_sockaddr_length_type = socklen_t;
         static const constexpr native_socket_type native_invalid_socket_value = -1;
+        inline auto native_close_socket(native_socket_type skt)
+        {
+            return ::close(skt);
+        }
 #endif
 
         template <class T1, class T2>
@@ -163,6 +174,17 @@ namespace rpnx
             std::memcpy(&t, &value, sizeof(value));
             return t;
         }
+
+        struct network_enabled_context
+        {
+#ifdef _WIN32
+            network_enabled_context()
+                : obj(2,2)
+            {}
+          private:
+            detail::wsa_intializer obj;
+#endif
+        };
 
         class ip4_udp_socket;
         class ip4_udp_socket_ref;
@@ -187,8 +209,12 @@ namespace rpnx
 
         class async_ip6_tcp_acceptor;
         class async_ip6_tcp_acceptor_ref;
+
         class async_ip6_tcp_connection;
         class async_ip6_tcp_connection_ref;
+
+        class async_ip6_tcp_autoacceptor;
+
 
         template < typename It >
         void net_send(ip4_udp_socket_ref socket, ip4_udp_endpoint const& to, It input_begin, It input_end);
@@ -212,7 +238,7 @@ namespace rpnx
         void net_bind(ip4_udp_socket& socket, ip4_udp_endpoint const& bind);
         void net_bind(async_ip4_udp_socket& socket, ip4_udp_endpoint const& bind);
 
-        void net_listen(ip4_tcp_acceptor& socket, ip4_tcp_endpoint const& addr);
+        void net_listen(ip4_tcp_acceptor_ref socket);
 
         ip4_udp_endpoint net_endpoint(ip4_udp_socket& socket);
         ip4_udp_endpoint net_endpoint(async_ip4_udp_socket& socket);
@@ -613,19 +639,13 @@ namespace rpnx
             {
 #ifdef _WIN32
                 detail::wsa_intializer::singleton();
-                if (m_s != native_invalid_socket_value)
-                {
-                    closesocket(m_s);
-                    m_s = native_invalid_socket_value;
-                }
-#else
-
-                if (m_s != native_invalid_socket_value)
-                {
-                    ::close(m_s);
-                    m_s = native_invalid_socket_value;
-                }
 #endif
+                if (m_s != native_invalid_socket_value)
+                {
+                    native_close_socket(m_s);
+                    m_s = native_invalid_socket_value;
+                }
+
             }
 
             void open()
@@ -644,7 +664,7 @@ namespace rpnx
 #endif
             }
 
-            auto native() const noexcept
+            native_socket_type native() const noexcept
             {
                 return m_s;
             }
@@ -675,20 +695,12 @@ namespace rpnx
 
             void close() noexcept
             {
-#ifdef _WIN32
-                // detail::wsa_intializer::singleton();
                 if (m_sock != native_invalid_socket_value)
                 {
-                    ::closesocket(m_sock);
+                    native_close_socket(m_sock);
                     m_sock = native_invalid_socket_value;
                 }
-#else
-                if (m_sock != native_invalid_socket_value)
-                {
-                    ::close(m_sock);
-                    m_sock = native_invalid_socket_value;
-                }
-#endif
+
             }
 
             void open()
@@ -1124,7 +1136,7 @@ namespace rpnx
             return it;
         }
 
-        inline void net_bind(ip4_udp_socket& socket, ip4_udp_endpoint const& bind_addr)
+        inline void net_bind(ip4_udp_socket_ref socket, ip4_udp_endpoint const& bind_addr)
         {
 #ifdef _WIN32
             detail::wsa_intializer::singleton();
@@ -1287,6 +1299,10 @@ namespace rpnx
             async_service();
             ~async_service();
 
+          private:
+            [[maybe_unused]] void bind_autoaccept6(detail::async_ip6_tcp_autoacceptor_binding &binding);
+            [[maybe_unused]] void unbind_autoaccept6(detail::async_ip6_tcp_autoacceptor_binding &binding);
+
             //void submit(async_ip4_udp_send_request const& req);
             //void cancel_all();
 
@@ -1304,32 +1320,22 @@ namespace rpnx
             {}
         };
 
-        template <typename MainAction, typename ... AuxActions>
+        //template <typename MainAction, typename ... AuxActions>
         class async_ip6_tcp_autoacceptor;
 
         class async_ip6_tcp_acceptor
         {
-            template <typename MainAction, typename ... AuxActions>
-            friend class async_ip6_tcp_autoacceptor;
-#ifdef _WIN32
-            SOCKET m_socket;
-#else
-            int m_socket;
-#endif
+            native_socket_type m_socket;
           public:
 #ifdef _WIN32
             async_ip6_tcp_acceptor()
             {
-
                 m_socket = WSASocketW( AF_INET6, SOCK_STREAM, IPPROTO_TCP,
                                       nullptr, 0, WSA_FLAG_OVERLAPPED);
                 if (m_socket == INVALID_SOCKET) throw network_error("async_ip6_tcp_acceptor::async_ip6_tcp_acceptor()", get_os_network_error_code());
             }
 
-            SOCKET native() const
-            {
-                return m_socket;
-            }
+
 #else
             async_ip6_tcp_acceptor()
             {
@@ -1338,13 +1344,12 @@ namespace rpnx
                 ::fcntl(m_socket, F_SETFL, O_NONBLOCK);
                 // TODO: Error checking here
             }
+#endif
 
-            int native() const
+            native_socket_type native() const
             {
                 return m_socket;
             }
-            // TODO
-#endif
         };
 
         class async_ip6_tcp_acceptor_ref
@@ -1363,29 +1368,29 @@ namespace rpnx
             {}
         };
 
+        namespace detail
+        {
+            struct async_ip6_tcp_autoacceptor_binding
+            {
+                std::function<void(rpnx::experimental::result<async_ip6_tcp_connection>)> m_mainaction;
+                std::vector<std::function<void()> > m_auxactions;
+            };
+        }
 
-
-        template <typename MainAction, typename ... AuxActions>
         class async_ip6_tcp_autoacceptor
         {
             async_ip6_tcp_acceptor_ref m_socket;
-            std::mutex m_mtx;
-            std::condition_variable m_cond;
-            MainAction m_action;
-            std::tuple<AuxActions...> m_aux;
+            async_service & m_async;
+            detail::async_ip6_tcp_autoacceptor_binding m_binding;
+
           public:
-            async_ip6_tcp_autoacceptor(async_ip6_tcp_acceptor & socket
+            template <typename MainAction, typename ... AuxActions>
+            async_ip6_tcp_autoacceptor(async_ip6_tcp_acceptor_ref socket
                                        , async_service & async
                                        , ip6_tcp_endpoint ep
                                        , MainAction completion_action
                                        , AuxActions && ... aux_actions
-                                       )
-            : m_socket(socket)
-            , m_action(std::move(completion_action))
-            , m_aux(std::forward<AuxActions>(aux_actions)...)
-            {
-
-            }
+                                       );
 
             ~async_ip6_tcp_autoacceptor()
             {
@@ -1396,6 +1401,29 @@ namespace rpnx
             {
             }
         };
+
+
+        class async_ip6_tcp_connection
+        {
+          private:
+            native_socket_type m_socket;
+
+          public:
+            async_ip6_tcp_connection()
+             : m_socket(native_invalid_socket_value)
+            {}
+
+            ~async_ip6_tcp_connection()
+            {
+                if (m_socket != native_invalid_socket_value)
+                {
+                    native_close_socket(m_socket);
+                }
+            }
+        };
+
+
+
 
         inline void net_bind(async_ip4_udp_socket& socket, ip4_udp_endpoint const& bind_addr)
         {
@@ -1489,6 +1517,14 @@ namespace rpnx
         }
 
         async_service& default_async_service();
+
+
+
+        template < typename MainAction, typename... AuxActions >
+        async_ip6_tcp_autoacceptor::async_ip6_tcp_autoacceptor(async_ip6_tcp_acceptor_ref socket, async_service& async, ip6_tcp_endpoint ep, MainAction completion_action, AuxActions&&... aux_actions)
+        {
+            //async.bind_autoaccept6(this->m_binding);
+        }
 
     } // namespace experimental
 } // namespace rpnx
