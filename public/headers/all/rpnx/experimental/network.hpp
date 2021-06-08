@@ -197,10 +197,10 @@ namespace rpnx
         void net_send(ip4_tcp_connection socket, It input_begin, It input_end);
 
         template < typename It >
-        auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& from, It output_begin, It output_bounds_check) -> It;
+        auto net_receive(ip4_udp_socket_ref socket, ip4_udp_endpoint& from, It output_begin, It output_bounds_check) -> It;
 
         template < typename It >
-        auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& from, It output_begin) -> It;
+        auto net_receive(ip4_udp_socket_ref socket, ip4_udp_endpoint& from, It output_begin) -> It;
 
         template < typename It >
         auto net_receive(ip4_tcp_connection& socket, It output_begin, It output_end) -> void;
@@ -1050,7 +1050,7 @@ namespace rpnx
         }
 
         template < typename It >
-        auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& fr, It begin_packet, It end_packet) -> It
+        auto net_receive(ip4_udp_socket_ref socket, ip4_udp_endpoint& fr, It begin_packet, It end_packet) -> It
         {
 #ifdef _WIN32
             detail::wsa_intializer::singleton();
@@ -1090,7 +1090,7 @@ namespace rpnx
         }
 
         template < typename It >
-        auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& fr, It begin_packet) -> It
+        auto net_receive(ip4_udp_socket_ref socket, ip4_udp_endpoint& fr, It begin_packet) -> It
         {
 #ifdef _WIN32
             detail::wsa_intializer::singleton();
