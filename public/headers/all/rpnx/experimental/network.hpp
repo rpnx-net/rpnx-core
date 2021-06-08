@@ -139,6 +139,8 @@ namespace rpnx
             return std::error_code(er, std::system_category());
         }
         using native_socket_type = SOCKET;
+        using native_sockaddr_length_type = int;
+        static const constexpr native_socket_type native_invalid_socket_value = INVALID_SOCKET;
 #endif
 
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
@@ -147,6 +149,8 @@ namespace rpnx
             return std::error_code(errno, std::system_category());
         }
         using native_socket_type = int;
+        using native_sockaddr_length_type = socklen_t;
+        static const constexpr native_socket_type native_invalid_socket_value = -1;
 #endif
 
         template <class T1, class T2>
@@ -161,8 +165,13 @@ namespace rpnx
         }
 
         class ip4_udp_socket;
+        class ip4_udp_socket_ref;
+
         class ip4_udp_endpoint;
+
         class ip4_tcp_acceptor;
+        class ip4_tcp_acceptor_ref;
+
         class ip4_tcp_connection;
         class ip4_tcp_endpoint;
 
@@ -177,19 +186,25 @@ namespace rpnx
         class async_ip4_udp_socket;
 
         class async_ip6_tcp_acceptor;
+        class async_ip6_tcp_acceptor_ref;
+        class async_ip6_tcp_connection;
+        class async_ip6_tcp_connection_ref;
 
         template < typename It >
-        void net_send(ip4_udp_socket& socket, ip4_udp_endpoint const& to, It input_begin, It input_end);
+        void net_send(ip4_udp_socket_ref socket, ip4_udp_endpoint const& to, It input_begin, It input_end);
 
         template < typename It >
-        void net_send(ip4_tcp_connection& socket, It input_begin, It input_end);
+        void net_send(ip4_tcp_connection socket, It input_begin, It input_end);
 
         template < typename It >
         auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& from, It output_begin, It output_bounds_check) -> It;
+
         template < typename It >
         auto net_receive(ip4_udp_socket& socket, ip4_udp_endpoint& from, It output_begin) -> It;
+
         template < typename It >
         auto net_receive(ip4_tcp_connection& socket, It output_begin, It output_end) -> void;
+
         template < typename It >
         auto net_receive(ip4_tcp_connection& socket, size_t count, It output) -> void;
 
@@ -202,7 +217,7 @@ namespace rpnx
         ip4_udp_endpoint net_endpoint(ip4_udp_socket& socket);
         ip4_udp_endpoint net_endpoint(async_ip4_udp_socket& socket);
 
-        ip4_tcp_connection net_accept_connection(ip4_tcp_acceptor&);
+        ip4_tcp_connection net_accept_connection(ip4_tcp_acceptor_ref);
         void net_accept_connection(ip4_tcp_acceptor& socket, ip4_tcp_connection& connection);
 
         class ip6_address 
@@ -312,6 +327,8 @@ namespace rpnx
                 m_addr[1] = reinterpret_cast< char const* >(&addr.s_addr)[1];
                 m_addr[2] = reinterpret_cast< char const* >(&addr.s_addr)[2];
                 m_addr[3] = reinterpret_cast< char const* >(&addr.s_addr)[3];
+#else
+#error Implement
 #endif
             }
 
@@ -500,11 +517,7 @@ namespace rpnx
           public:
             ip4_udp_socket() noexcept
             {
-#ifdef _WIN32
-                m_s = INVALID_SOCKET;
-#else
-                m_s = -1;
-#endif
+                m_s = native_invalid_socket_value;
             }
 
             ip4_udp_socket(ip4_udp_socket const&) = delete;
@@ -587,7 +600,7 @@ namespace rpnx
 
                 auto result = ::getsockname(m_s, (sockaddr*)&addr, &len);
 
-                if (result == -1)
+                if (result == native_invalid_socket_value)
                 {
                     throw network_error("upd_ip4_socket::endpoint()", get_os_network_error_code());
                 }
@@ -600,17 +613,17 @@ namespace rpnx
             {
 #ifdef _WIN32
                 detail::wsa_intializer::singleton();
-                if (m_s != INVALID_SOCKET)
+                if (m_s != native_invalid_socket_value)
                 {
                     closesocket(m_s);
-                    m_s = INVALID_SOCKET;
+                    m_s = native_invalid_socket_value;
                 }
 #else
 
-                if (m_s != -1)
+                if (m_s != native_invalid_socket_value)
                 {
                     ::close(m_s);
-                    m_s = -1;
+                    m_s = native_invalid_socket_value;
                 }
 #endif
             }
@@ -620,13 +633,13 @@ namespace rpnx
 #ifdef _WIN32
                 detail::wsa_intializer::singleton();
                 close();
-                m_s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-                if (m_s == INVALID_SOCKET)
+                m_s = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+                if (m_s == native_invalid_socket_value)
                     throw network_error("udp_ip4_socket::open()", get_os_network_error_code());
 #else
                 this->close();
                 m_s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-                if (m_s == -1)
+                if (m_s == native_invalid_socket_value)
                     throw network_error("udp_ip4_socket::open()", get_os_network_error_code());
 #endif
             }
@@ -638,14 +651,13 @@ namespace rpnx
         };
 
         class ip4_tcp_acceptor
-
         {
 
           private:
             native_socket_type m_sock;
 
           public:
-            ip4_tcp_acceptor() noexcept : m_sock(-1)
+            ip4_tcp_acceptor() noexcept : m_sock(native_invalid_socket_value)
             {
             }
 
@@ -656,7 +668,7 @@ namespace rpnx
 
             ip4_tcp_acceptor(ip4_tcp_acceptor const&) = delete;
 
-            ip4_tcp_acceptor(ip4_tcp_acceptor&& other) noexcept : m_sock(-1)
+            ip4_tcp_acceptor(ip4_tcp_acceptor&& other) noexcept : m_sock(native_invalid_socket_value)
             {
                 std::swap(m_sock, other.m_sock);
             }
@@ -665,16 +677,16 @@ namespace rpnx
             {
 #ifdef _WIN32
                 // detail::wsa_intializer::singleton();
-                if (m_sock != -1)
+                if (m_sock != native_invalid_socket_value)
                 {
                     ::closesocket(m_sock);
-                    m_sock = -1;
+                    m_sock = native_invalid_socket_value;
                 }
 #else
-                if (m_sock != -1)
+                if (m_sock != native_invalid_socket_value)
                 {
                     ::close(m_sock);
-                    m_sock = -1;
+                    m_sock = native_invalid_socket_value;
                 }
 #endif
             }
@@ -690,7 +702,7 @@ namespace rpnx
 #else
                 close();
                 m_sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-                if (m_sock == -1)
+                if (m_sock == native_invalid_socket_value)
                     throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
 #endif
             }
@@ -713,7 +725,7 @@ namespace rpnx
                 this->open();
                 ::sockaddr_in sock_addr = listen_addr.native();
                 ::bind(m_sock, (sockaddr*)&sock_addr, sizeof(sockaddr_in));
-                if (::listen(m_sock, SOMAXCONN) == -1)
+                if (::listen(m_sock, SOMAXCONN) == native_invalid_socket_value)
                 {
                     throw network_error("tcp_ip4_socket::open()", get_os_network_error_code());
                 }
@@ -733,14 +745,83 @@ namespace rpnx
 #endif
         };
 
+        class [[maybe_unused]] ip4_udp_socket_ref
+        {
+            native_socket_type m_socket;
+
+          public:
+            [[maybe_unused]] ip4_udp_socket_ref() : m_socket(-1) {}
+            [[maybe_unused]] ip4_udp_socket_ref(ip4_udp_socket_ref const &) = default;
+            [[maybe_unused]] ip4_udp_socket_ref(ip4_udp_socket const & other)
+                : m_socket(other.native())
+            {}
+
+            auto native() const noexcept
+            {
+                return m_socket;
+            }
+
+            [[maybe_unused]] static inline ip4_udp_socket_ref from_native(native_socket_type native_value)
+            {
+                ip4_udp_socket_ref result;
+                result.m_socket = native_value;
+                return result;
+            }
+        };
+
+        class [[maybe_unused]] ip4_tcp_acceptor_ref
+        {
+            native_socket_type m_socket;
+
+          public:
+            [[maybe_unused]] ip4_tcp_acceptor_ref() : m_socket(-1) {}
+            [[maybe_unused]] ip4_tcp_acceptor_ref(ip4_tcp_acceptor_ref const &) = default;
+            [[maybe_unused]] ip4_tcp_acceptor_ref(ip4_tcp_acceptor const & other)
+                : m_socket(other.native())
+            {}
+
+            auto native() const noexcept
+            {
+                return m_socket;
+            }
+
+            [[maybe_unused]] static inline ip4_tcp_acceptor_ref from_native(decltype(m_socket) native_value)
+            {
+                ip4_tcp_acceptor_ref result;
+                result.m_socket = native_value;
+                return result;
+            }
+        };
+
+        class [[maybe_unused]] ip4_tcp_connection_ref
+        {
+            friend class ip4_tcp_connection;
+
+            native_socket_type m_socket;
+
+          public:
+
+            ip4_tcp_connection_ref() : m_socket(-1){}
+            ip4_tcp_connection_ref(ip4_tcp_connection_ref const &) = default;
+            ip4_tcp_connection_ref(ip4_tcp_connection const &);
+
+            native_socket_type native() const noexcept
+            {
+                return m_socket;
+            }
+
+            [[maybe_unused]] static inline ip4_tcp_connection_ref from_native(decltype(m_socket) native_value)
+            {
+                ip4_tcp_connection_ref result;
+                result.m_socket = native_value;
+                return result;
+            }
+        };
+
         class ip4_tcp_connection
         {
           private:
-#ifdef _WIN32
-            SOCKET m_socket;
-#else
-            int m_socket;
-#endif
+            native_socket_type m_socket;
           public:
             ip4_tcp_connection() noexcept : m_socket(-1)
             {
@@ -879,8 +960,14 @@ namespace rpnx
             }
         };
 
+        inline ip4_tcp_connection_ref::ip4_tcp_connection_ref(const ip4_tcp_connection& other)
+        :m_socket(other.native())
+        {
+
+        }
+
         template < typename It >
-        void net_send(ip4_udp_socket& socket, ip4_udp_endpoint const& to, It begin_packet, It end_packet)
+        void net_send(ip4_udp_socket_ref socket, ip4_udp_endpoint const& to, It begin_packet, It end_packet)
         {
 #ifdef _WIN32
             detail::wsa_intializer::singleton();
@@ -910,7 +997,7 @@ namespace rpnx
         }
 
         template < typename It >
-        void net_send(ip4_tcp_connection& socket, It begin_data, It end_data)
+        void net_send(ip4_tcp_connection_ref socket, It begin_data, It end_data)
         {
 #ifdef _WIN32
             detail::wsa_intializer::singleton();
@@ -1051,12 +1138,9 @@ namespace rpnx
             return;
         }
 
-        inline void net_accept_connection(ip4_tcp_acceptor& socket, ip4_tcp_connection& connection)
-        {
-            connection = net_accept_connection(socket);
-        }
 
-        inline ip4_tcp_connection net_accept_connection(ip4_tcp_acceptor& socket)
+
+        inline ip4_tcp_connection net_accept_connection(ip4_tcp_acceptor_ref socket)
         {
 #ifdef _WIN32
             ip4_tcp_connection con = ip4_tcp_connection(::accept(socket.native(), nullptr, nullptr));
@@ -1075,6 +1159,11 @@ namespace rpnx
 
             return std::move(con);
 #endif
+        }
+
+        inline void net_accept_connection(ip4_tcp_acceptor& socket, ip4_tcp_connection& connection)
+        {
+            connection = net_accept_connection(socket);
         }
 
 
