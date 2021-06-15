@@ -11,21 +11,9 @@ int main()
 {
     try
     {
-        /*
-        rpnx::experimental::ip4_tcp_acceptor server;
+        rpnx::experimental::network_enabled_context context;
 
-        server.listen(rpnx::experimental::ip4_tcp_endpoint(rpnx::experimental::ip4_address(0, 0, 0, 0), 8080));
 
-        rpnx::experimental::ip4_tcp_connection con = rpnx::experimental::net_accept_connection(server);
-
-        std::cout << con.endpoint() << std::endl;
-        std::cout << con.peer_endpoint() << std::endl;
-
-        std::string hello = "hello";
-
-        con.send(hello.begin(), hello.end());
-
-         */
         rpnx::experimental::ip6_address addr6;
 
         auto addr_native = addr6.native();
@@ -37,14 +25,7 @@ int main()
 
         std::cout << sizeof(std::promise<int>) << " " << sizeof(std::exception_ptr) <<  std::endl;
 
-        //std::optional<rpnx::experimental::async_ip6_tcp_autoacceptor> auto_acceptor;
-
-        /*auto_acceptor.emplace(async_svc, dispatch, acceptor6, [this](rpnx::experimental:async_ip6_tcp_connection) {
-
-
-                              });
-        */
-
+        rpnx::experimental::async_ip6_tcp_acceptor acceptor6;
 
 
     }

@@ -1291,6 +1291,7 @@ namespace rpnx
 
         class async_service
         {
+            friend class async_ip6_tcp_autoacceptor;
           private:
             void * m_pimpl;
 
@@ -1354,18 +1355,19 @@ namespace rpnx
 
         class async_ip6_tcp_acceptor_ref
         {
-#ifdef _WIN32
-            SOCKET m_socket;
-#else
-            int m_socket;
-#endif
+            native_socket_type m_socket;
 
           public:
-            async_ip6_tcp_acceptor_ref() : m_socket(-1) {}
+            async_ip6_tcp_acceptor_ref() : m_socket(native_invalid_socket_value) {}
             async_ip6_tcp_acceptor_ref(async_ip6_tcp_acceptor_ref const &) = default;
             async_ip6_tcp_acceptor_ref(async_ip6_tcp_acceptor const & other)
             : m_socket(other.native())
             {}
+
+            [[nodiscard]] native_socket_type native() const noexcept
+            {
+                return m_socket;
+            }
         };
 
         namespace detail
@@ -1374,31 +1376,36 @@ namespace rpnx
             {
                 std::function<void(rpnx::experimental::result<async_ip6_tcp_connection>)> m_mainaction;
                 std::vector<std::function<void()> > m_auxactions;
+                async_ip6_tcp_acceptor_ref m_socket;
+#ifdef _WIN32
+                OVERLAPPED m_overlapped;
+                SOCKET m_accept_on_socket;
+#endif
             };
         }
 
         class async_ip6_tcp_autoacceptor
         {
-            async_ip6_tcp_acceptor_ref m_socket;
+
             async_service & m_async;
             detail::async_ip6_tcp_autoacceptor_binding m_binding;
 
           public:
             template <typename MainAction, typename ... AuxActions>
-            async_ip6_tcp_autoacceptor(async_ip6_tcp_acceptor_ref socket
+            [[maybe_unused]] async_ip6_tcp_autoacceptor(async_ip6_tcp_acceptor_ref socket
                                        , async_service & async
                                        , ip6_tcp_endpoint ep
                                        , MainAction completion_action
                                        , AuxActions && ... aux_actions
                                        );
 
-            ~async_ip6_tcp_autoacceptor()
-            {
-            }
+            ~async_ip6_tcp_autoacceptor();
 
           private:
             void run_loop()
             {
+                // TODO
+
             }
         };
 
@@ -1523,7 +1530,16 @@ namespace rpnx
         template < typename MainAction, typename... AuxActions >
         async_ip6_tcp_autoacceptor::async_ip6_tcp_autoacceptor(async_ip6_tcp_acceptor_ref socket, async_service& async, ip6_tcp_endpoint ep, MainAction completion_action, AuxActions&&... aux_actions)
         {
-            //async.bind_autoaccept6(this->m_binding);
+
+            m_binding.m_socket = socket;
+            m_binding.m_mainaction = completion_action;
+            (m_binding.m_auxactions.push_back(std::forward<AuxActions>(aux_actions)),...);
+            m_async.bind_autoaccept6(this->m_binding);
+        }
+
+        inline async_ip6_tcp_autoacceptor::~async_ip6_tcp_autoacceptor()
+        {
+            m_async.unbind_autoaccept6(this->m_binding);
         }
 
     } // namespace experimental

@@ -4,13 +4,15 @@
 
 #include "rpnx/experimental/network.hpp"
 
-#include <windows.h>
 #include <ioapiset.h>
+#include <windows.h>
 
 #include <map>
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <shared_mutex>
+#include <set>
 
 namespace rpnx
 {
@@ -26,17 +28,30 @@ namespace rpnx
                 [[maybe_unused]] virtual void iocp_respond(win32_async_service& response) = 0;
             };
 
-            struct ip6_acceptor_handler
+            struct ip6_acceptor_handler final
                 : public iocp_handler
             {
+                async_ip6_tcp_acceptor_ref m_socket;
+                std::set<detail::async_ip6_tcp_autoacceptor_binding*> m_bindings;
+
+                ip6_acceptor_handler(async_ip6_tcp_acceptor_ref which)
+                : m_socket(which)
+                {
+
+                }
+
                 virtual ~ip6_acceptor_handler();
                 void iocp_respond(win32_async_service& srv) override;
 
-                void submit_accept6(win32_async_service& srv, std::function<void(rpnx::experimental::result<async_ip6_tcp_connection>)>);
+                void attach(detail::async_ip6_tcp_autoacceptor_binding & binding, win32_async_service& srv);
+                void detach(detail::async_ip6_tcp_autoacceptor_binding & binding, win32_async_service& srv);
+
+                //void submit_accept6(win32_async_service& srv, std::function<void(rpnx::experimental::result<async_ip6_tcp_connection>)>);
             };
 
             struct win32_async_service
             {
+                friend class iocp_handler;
 
                 std::vector<std::thread> m_threads;
                 std::mutex m_mtx;
@@ -44,7 +59,8 @@ namespace rpnx
                 std::atomic<bool> m_stop_signal;
 
 
-                std::map<ULONG_PTR, std::unique_ptr<iocp_handler>> m_allocated_objects;
+                std::shared_mutex m_handlers_mutex;
+                std::map<ULONG_PTR, std::unique_ptr<iocp_handler>> m_handlers;
 
                 win32_async_service();
                 ~win32_async_service();
@@ -55,6 +71,9 @@ namespace rpnx
                 {
                     // TODO
                 }
+
+                void bind_autoaccept6(detail::async_ip6_tcp_autoacceptor_binding & binding);
+                void unbind_autoaccept6(detail::async_ip6_tcp_autoacceptor_binding & binding);
 
                 void run_thread();
             };
@@ -93,6 +112,16 @@ rpnx::experimental::async_service::async_service() : m_pimpl(nullptr)
 rpnx::experimental::async_service::~async_service()
 {
     delete reinterpret_cast< win32_async_service* >(m_pimpl);
+}
+
+void rpnx::experimental::async_service::bind_autoaccept6(rpnx::experimental::detail::async_ip6_tcp_autoacceptor_binding& binding)
+{
+    reinterpret_cast< win32_async_service* >(m_pimpl)->bind_autoaccept6(binding);
+}
+
+void rpnx::experimental::async_service::unbind_autoaccept6(rpnx::experimental::detail::async_ip6_tcp_autoacceptor_binding& binding)
+{
+    reinterpret_cast< win32_async_service* >(m_pimpl)->unbind_autoaccept6(binding);
 }
 /*
 void rpnx::experimental::async_service::submit(const async_ip4_udp_send_request& req)
@@ -171,15 +200,78 @@ void rpnx::experimental::win32_async_service::run_thread()
             }
         }
 
-        // TODO: Think of a strategy to keep track of IOCP handlers
-
-        std::unique_lock lock(m_mtx);
-
-        m_allocated_objects.at(ptr)->iocp_respond(*this);
-
-
-
+        std::shared_lock lock(m_handlers_mutex);
+        m_handlers.at(ptr)->iocp_respond(*this);
     }
 }
+void rpnx::experimental::implementation::win32_async_service::bind_autoaccept6(rpnx::experimental::detail::async_ip6_tcp_autoacceptor_binding& binding)
+{
+    // We need to create a new handler if it doesn't exist
+    std::unique_lock lock(m_handlers_mutex);
+    ULONG_PTR ptr = static_cast<ULONG_PTR>(binding.m_socket.native());
+    std::unique_ptr<iocp_handler> & cell = m_handlers[ptr];
 
+    bool was_null = false;
+    if (cell == nullptr)
+    {
+        cell = std::unique_ptr<iocp_handler>(new ip6_acceptor_handler(binding.m_socket));
+        was_null = true;
+    }
+
+    ip6_acceptor_handler * handler = dynamic_cast<ip6_acceptor_handler*>(&*cell);
+
+    // There should be no possibility that this value is of the wrong type apart from user error,
+    // since we should delete this object from the map when all bindings are cleaned up.
+
+    // If you hit this assert, then it means that you didn't destroy all binding objects (e.g. autoacceptor, autoreceiver, etc.)
+    // before destroying some object (which isn't an acceptor6) and its handle was reused by the OS for a newly constructed object
+    assert(handler != nullptr);
+
+
+    [[maybe_unused]] auto err = ::CreateIoCompletionPort((HANDLE) binding.m_socket.native(), m_iocp_handle, binding.m_socket.native(), 0);
+    [[maybe_unused]] auto err2 = GetLastError();
+
+    handler->attach(binding, *this);
+
+
+}
+
+void rpnx::experimental::implementation::win32_async_service::unbind_autoaccept6(rpnx::experimental::detail::async_ip6_tcp_autoacceptor_binding& binding)
+{
+    std::unique_lock lock(m_handlers_mutex);
+    ULONG_PTR ptr = static_cast<ULONG_PTR>(binding.m_socket.native());
+    std::unique_ptr<iocp_handler> & cell = m_handlers[ptr];
+
+    bool was_null = false;
+    if (cell == nullptr)
+    {
+        was_null = true;
+    }
+
+    assert(was_null == false);
+
+    ip6_acceptor_handler * handler = dynamic_cast<ip6_acceptor_handler*>(&*cell);
+
+    assert(handler != nullptr);
+
+    handler->detach(binding, *this);
+
+}
+
+void rpnx::experimental::implementation::ip6_acceptor_handler::attach(detail::async_ip6_tcp_autoacceptor_binding& binding, win32_async_service & svc)
+{
+    binding.m_overlapped = {};
+    binding.m_accept_on_socket = WSASocketW( AF_INET6, SOCK_STREAM, IPPROTO_TCP,
+                                                        nullptr, 0, WSA_FLAG_OVERLAPPED);
+
+
+
+}
+
+
+void rpnx::experimental::implementation::ip6_acceptor_handler::detach(detail::async_ip6_tcp_autoacceptor_binding& binding, win32_async_service & svc6)
+{
+
+
+}
 #endif
