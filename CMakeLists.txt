@@ -12,7 +12,7 @@ check_cxx_source_compiles("int main() { __builtin_assume(1 == 1); }" RPNX_HAVE_B
 
 
 
-add_library(rpnx-core private/sources/all/experimental/async_service.cpp private/sources/windows/experimental/win_async_service.cpp)
+add_library(rpnx-core private/sources/all/experimental/async_service.cpp private/sources/windows/experimental/windows_networking.cpp)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
 
 if (RPNX_HAVE_BUILTIN_ASSUME)
