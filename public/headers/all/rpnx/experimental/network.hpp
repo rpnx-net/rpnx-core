@@ -15,18 +15,14 @@
 #if defined(__FreeBSD__)
 #include <sys/types.h>
 #endif
-
 #include <fcntl.h>
-
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
 #endif
 
 #if defined(__FreeBSD__)
-
 #include <netinet/in.h>
 #include <sys/socket.h>
 #endif
@@ -1335,8 +1331,6 @@ namespace rpnx
                                       nullptr, 0, WSA_FLAG_OVERLAPPED);
                 if (m_socket == INVALID_SOCKET) throw network_error("async_ip6_tcp_acceptor::async_ip6_tcp_acceptor()", get_os_network_error_code());
             }
-
-
 #else
             async_ip6_tcp_acceptor()
             {
