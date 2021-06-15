@@ -12,7 +12,7 @@ check_cxx_source_compiles("int main() { __builtin_assume(1 == 1); }" RPNX_HAVE_B
 
 
 
-add_library(rpnx-core private/sources/all/experimental/async_service.cpp private/sources/windows/experimental/windows_networking.cpp)
+add_library(rpnx-core private/sources/all/experimental/async_service.cpp)
 set_target_properties(rpnx-core PROPERTIES CXX_STANDARD 17)
 
 if (RPNX_HAVE_BUILTIN_ASSUME)
@@ -53,13 +53,21 @@ list ( APPEND RPNX_CORE_HEADERS
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
     # Windows specific code goes here
     target_compile_definitions(rpnx-core PRIVATE _MBCS _CRT_SECURE_NO_WARNINGS)
+
     target_include_directories(rpnx-core PUBLIC public/headers/windows)
+    target_include_directories(rpnx-core PRIVATE private/headers/windows)
 
     target_link_libraries(rpnx-core ws2_32)
 
 
+    target_sources(rpnx-core PRIVATE
+            private/sources/windows/experimental/kbind.cpp
+            private/sources/windows/experimental/windows_networking.cpp)
+
+
     list ( APPEND RPNX_CORE_HEADERS
             public/headers/all/rpnx/environment.hpp
+            private/headers/windows/rpnx/kbind.hpp
             )
 endif ()
 

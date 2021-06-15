@@ -46,6 +46,9 @@ namespace rpnx
                 void attach(detail::async_ip6_tcp_autoacceptor_binding & binding, win32_async_service& srv);
                 void detach(detail::async_ip6_tcp_autoacceptor_binding & binding, win32_async_service& srv);
 
+                void activate_binding(detail::async_ip6_tcp_autoacceptor_binding & binding, win32_async_service& srv);
+                void binding_wakeup(detail::async_ip6_tcp_autoacceptor_binding & binding, win32_async_service& srv);
+                void deactivate_binding(detail::async_ip6_tcp_autoacceptor_binding & binding, win32_async_service& srv);
                 //void submit_accept6(win32_async_service& srv, std::function<void(rpnx::experimental::result<async_ip6_tcp_connection>)>);
             };
 
@@ -217,23 +220,16 @@ void rpnx::experimental::implementation::win32_async_service::bind_autoaccept6(r
         cell = std::unique_ptr<iocp_handler>(new ip6_acceptor_handler(binding.m_socket));
         was_null = true;
     }
-
     ip6_acceptor_handler * handler = dynamic_cast<ip6_acceptor_handler*>(&*cell);
-
     // There should be no possibility that this value is of the wrong type apart from user error,
     // since we should delete this object from the map when all bindings are cleaned up.
 
     // If you hit this assert, then it means that you didn't destroy all binding objects (e.g. autoacceptor, autoreceiver, etc.)
     // before destroying some object (which isn't an acceptor6) and its handle was reused by the OS for a newly constructed object
     assert(handler != nullptr);
-
-
     [[maybe_unused]] auto err = ::CreateIoCompletionPort((HANDLE) binding.m_socket.native(), m_iocp_handle, binding.m_socket.native(), 0);
     [[maybe_unused]] auto err2 = GetLastError();
-
     handler->attach(binding, *this);
-
-
 }
 
 void rpnx::experimental::implementation::win32_async_service::unbind_autoaccept6(rpnx::experimental::detail::async_ip6_tcp_autoacceptor_binding& binding)
@@ -260,18 +256,22 @@ void rpnx::experimental::implementation::win32_async_service::unbind_autoaccept6
 
 void rpnx::experimental::implementation::ip6_acceptor_handler::attach(detail::async_ip6_tcp_autoacceptor_binding& binding, win32_async_service & svc)
 {
-    binding.m_overlapped = {};
-    binding.m_accept_on_socket = WSASocketW( AF_INET6, SOCK_STREAM, IPPROTO_TCP,
-                                                        nullptr, 0, WSA_FLAG_OVERLAPPED);
+    m_bindings.insert(&binding);
 
-
-
+    activate_binding(binding, svc);
 }
 
 
 void rpnx::experimental::implementation::ip6_acceptor_handler::detach(detail::async_ip6_tcp_autoacceptor_binding& binding, win32_async_service & svc6)
 {
 
+
+}
+void rpnx::experimental::implementation::ip6_acceptor_handler::activate_binding(rpnx::experimental::detail::async_ip6_tcp_autoacceptor_binding& binding, rpnx::experimental::win32_async_service& srv)
+{
+    binding.m_overlapped = {};
+    binding.m_accept_on_socket = WSASocketW( AF_INET6, SOCK_STREAM, IPPROTO_TCP,
+                                             nullptr, 0, WSA_FLAG_OVERLAPPED);
 
 }
 #endif
