@@ -279,21 +279,35 @@ namespace rpnx
                 return m_data.u.Byte[index];
             }
 
-            constexpr std::uint8_t const & operator[](int index) const
+            constexpr std::uint8_t const & operator[](int index) const noexcept
             {
                 //RPNX_ASSERT(index < size());
                 return m_data.u.Byte[index];
             }
 
 
+
+
             #else
-            inline constexpr in6_addr const & native() const
+            inline constexpr in6_addr const & native() const noexcept
             {
                 return m_data;
             }
             #endif
-            
-            
+
+            // TODO:
+            // Check that this generates good instructions on x86
+            bool operator ==(const ip6_address & other) const noexcept
+            {
+                for (int i = 0; i < size(); i++)
+                {
+                    if (this->operator[](i) != other[i])
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
             
             
         };
@@ -303,6 +317,27 @@ namespace rpnx
             ip6_address m_addr;
             std::uint16_t m_port;
           public:
+
+            ip6_tcp_endpoint() const noexcept
+                : m_addr(), m_port(0)
+            {}
+
+            ip6_tcp_endpoint(ip6_tcp_endpoint const &) = default;
+
+            ip6_tcp_endpoint(ip6_address const & addr, std::uint16_t port)
+                : m_addr(addr), m_port(port)
+            {}
+
+
+            ip6_tcp_endpoint & operator = (ip6_tcp_endpoint const &) = default;
+
+            bool operator==(ip6_tcp_endpoint const & other) const noexcept
+            {
+                return address() == other.address() && port() == other.port();
+            }
+
+
+
             ip6_address& address()
             {
                 return m_addr;
@@ -1523,6 +1558,7 @@ namespace rpnx
 
         template < typename MainAction, typename... AuxActions >
         async_ip6_tcp_autoacceptor::async_ip6_tcp_autoacceptor(async_ip6_tcp_acceptor_ref socket, async_service& async, ip6_tcp_endpoint ep, MainAction completion_action, AuxActions&&... aux_actions)
+        : m_async(async)
         {
 
             m_binding.m_socket = socket;

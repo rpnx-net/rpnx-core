@@ -7,8 +7,12 @@
 #include <rpnx/experimental/priority_dispatcher.hpp>
 #include <thread>
 
+#include "rpnx/kbind.hpp"
+
 int main()
 {
+    assert(rpnx::g_kbind.winnt_AcceptEx != nullptr);
+    //return 0;
     try
     {
         rpnx::experimental::network_enabled_context context;
@@ -26,6 +30,8 @@ int main()
         std::cout << sizeof(std::promise<int>) << " " << sizeof(std::exception_ptr) <<  std::endl;
 
         rpnx::experimental::async_ip6_tcp_acceptor acceptor6;
+
+        rpnx::experimental::async_ip6_tcp_autoacceptor(acceptor6, async_svc, rpnx::experimental::ip6_tcp_endpoint{rpnx::experimental::ip6_address(), 8080}, submitter);
 
 
     }

@@ -5,7 +5,12 @@
 #ifndef RPNXCORE_KBIND_HPP
 #define RPNXCORE_KBIND_HPP
 
-#include <Windows.h>
+
+#include <winsock2.h>
+#include <mswsock.h>
+#include <ws2def.h>
+#include <ws2ipdef.h>
+#include <cinttypes>
 
 namespace rpnx
 {
@@ -13,20 +18,22 @@ namespace rpnx
     {
       public:
         kbind();
+
+        int (*winnt_AcceptEx) (
+            SOCKET       sListenSocket,
+            SOCKET       sAcceptSocket,
+            void*        lpOutputBuffer,
+            int        dwReceiveDataLength,
+            int        dwLocalAddressLength,
+            int        dwRemoteAddressLength,
+            int*      lpdwBytesReceived,
+            _OVERLAPPED* lpOverlapped
+        );
     };
 
-    BOOL (*winnt_AcceptEx = nullptr) (
-        SOCKET       sListenSocket,
-        SOCKET       sAcceptSocket,
-        PVOID        lpOutputBuffer,
-        DWORD        dwReceiveDataLength,
-        DWORD        dwLocalAddressLength,
-        DWORD        dwRemoteAddressLength,
-        LPDWORD      lpdwBytesReceived,
-        LPOVERLAPPED lpOverlapped
-    );
+    [[maybe_unused]]
 
-    extern kbind g_kbind;
+    [[maybe_unused]] extern kbind g_kbind;
 }
 
 #endif // RPNXCORE_KBIND_HPP

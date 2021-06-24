@@ -55,7 +55,7 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
     target_compile_definitions(rpnx-core PRIVATE _MBCS _CRT_SECURE_NO_WARNINGS)
 
     target_include_directories(rpnx-core PUBLIC public/headers/windows)
-    target_include_directories(rpnx-core PRIVATE private/headers/windows)
+    target_include_directories(rpnx-core PUBLIC private/headers/windows)
 
     target_link_libraries(rpnx-core ws2_32)
 
